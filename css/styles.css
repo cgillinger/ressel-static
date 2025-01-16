@@ -1,0 +1,343 @@
+/**
+ * Resseltrafiken Web Application - Styles
+ * 
+ * Global styling for the Resseltrafiken application.
+ * Includes dark theme, responsive design, and accessibility features.
+ * 
+ * Version History:
+ * 2.0.0 (2025-01-16) - Converted to static web styles, improved accessibility
+ * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
+ * 
+ * @author Christian Gillinger
+ * @version 2.0.0
+ * @license MIT
+ */
+
+/* CSS Custom Properties - Theme Variables */
+:root {
+    /* Colors */
+    --color-text: #EEEEEE;
+    --color-text-dimmed: #666666;
+    --color-text-bright: #FFFFFF;
+    --color-background: #000000;
+    --color-highlight-green: #00ff00;
+    --color-highlight-yellow: #ffff00;
+    --color-error: #ff0000;
+    
+    /* Typography */
+    --font-primary: "Roboto Condensed", system-ui, sans-serif;
+    --font-size-base: 20px;
+    --font-size-small: 16px;
+    --font-size-large: 22px;
+    
+    /* Spacing */
+    --gap-body-top: 60px;
+    --gap-modules: 30px;
+    --stop-column-width: 200px;
+    --time-column-width: 45px;
+    --time-column-gap: 10px;
+    
+    /* Layout */
+    --visible-departures: 9;
+    --container-max-width: 1200px;
+    --border-radius: 4px;
+    
+    /* Transitions */
+    --transition-speed: 0.3s;
+}
+
+/* Base Styles */
+html {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-size: var(--font-size-base);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: var(--font-primary);
+    line-height: 1.5;
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+    overflow-y: auto;
+}
+
+/* Main Container */
+#app {
+    max-width: var(--container-max-width);
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Resseltrafiken Module Container */
+.MMM-Resseltrafiken {
+    color: var(--color-text-bright);
+    padding: 0;
+    margin: 0;
+    position: relative;
+    width: 100%;
+    height: auto;
+    min-height: 100vh;
+}
+
+/* Fade-out gradient for main container */
+.MMM-Resseltrafiken::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(
+        transparent,
+        rgba(0, 0, 0, 0.8) 40%,
+        var(--color-background)
+    );
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--transition-speed) ease;
+}
+
+/* Individual Timetable Container */
+.MMM-Resseltrafiken .timetable {
+    margin-bottom: var(--gap-modules);
+    position: relative;
+    width: fit-content;
+    max-width: 100%;
+}
+
+/* Remove fade-out gradient for individual timetable */
+
+/* Show fade-out gradient when content overflows */
+.MMM-Resseltrafiken .timetable.overflow::after {
+    opacity: 1;
+}
+
+/* Title Section */
+.MMM-Resseltrafiken .title-section {
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    position: relative;
+    text-align: right;
+}
+
+/* Title Styling */
+.MMM-Resseltrafiken .title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--font-size-large);
+    color: var(--color-text-bright);
+}
+
+/* Title Underline */
+.MMM-Resseltrafiken .title-section::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Title Icon */
+.MMM-Resseltrafiken .title img {
+    height: 50px;
+    width: auto;
+    filter: brightness(0) invert(1);
+}
+
+/* Departures Header */
+.MMM-Resseltrafiken .departures-header {
+    font-size: var(--font-size-small);
+    color: var(--color-text-dimmed);
+    margin-bottom: 10px;
+    text-align: left;
+    margin-left: calc(var(--stop-column-width) + 15px);
+}
+
+/* Row Container */
+.MMM-Resseltrafiken .row {
+    display: flex;
+    align-items: center;
+    padding: 4px 0;
+    position: relative;
+    min-height: 22px;
+    color: var(--color-text-bright) !important;
+}
+
+/* Stop Name */
+.MMM-Resseltrafiken .stop {
+    width: var(--stop-column-width);
+    min-width: var(--stop-column-width);
+    text-align: left;
+    padding-left: 15px;
+    font-size: var(--font-size-small);
+    color: var(--color-text-bright);
+}
+
+/* Highlighted Stop */
+.MMM-Resseltrafiken .highlight-stop .stop {
+    color: var(--color-highlight-green);
+}
+
+/* Times Container */
+.MMM-Resseltrafiken .times {
+    display: flex;
+    gap: var(--time-column-gap);
+    flex-wrap: nowrap;
+}
+
+/* Individual Time Slot */
+.MMM-Resseltrafiken .times span {
+    width: var(--time-column-width);
+    min-width: var(--time-column-width);
+    text-align: center;
+    color: var(--color-text-bright) !important;
+    padding: 2px 4px;
+    border-radius: var(--border-radius);
+    transition: all var(--transition-speed) ease;
+}
+
+/* Tomorrow Time */
+.MMM-Resseltrafiken .times span.tomorrow-time {
+    font-style: italic;
+    color: var(--color-text-bright) !important;
+}
+
+/* Highlighted Stop Row */
+.MMM-Resseltrafiken .highlight-stop {
+    position: relative;
+}
+
+/* Green Indicator Line */
+.MMM-Resseltrafiken .highlight-stop::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: var(--color-highlight-green);
+    border-radius: 2px;
+}
+
+/* Next Departure Highlight - Green */
+.MMM-Resseltrafiken .times span.highlight-green {
+    background-color: transparent;
+    border: 2px solid var(--color-highlight-green);
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+/* Imminent Departure Highlight - Yellow */
+.MMM-Resseltrafiken .times span.highlight-yellow {
+    background-color: transparent;
+    border: 2px solid var(--color-highlight-yellow);
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
+}
+
+/* Notifications */
+.MMM-Resseltrafiken .notification {
+    font-style: italic;
+    font-size: var(--font-size-small);
+    margin-bottom: 10px;
+    text-align: left;
+    padding: 10px;
+    border-radius: var(--border-radius);
+}
+
+.MMM-Resseltrafiken .notification.warning {
+    color: var(--color-highlight-yellow);
+    background-color: rgba(255, 255, 0, 0.1);
+}
+
+.MMM-Resseltrafiken .notification.error {
+    color: var(--color-error);
+    background-color: rgba(255, 0, 0, 0.1);
+}
+
+/* Footer Styling */
+.MMM-Resseltrafiken footer {
+    text-align: center;
+    padding: 20px 0;
+    color: var(--color-text-dimmed);
+    font-size: var(--font-size-small);
+    width: 100%;
+}
+
+/* Force Dark Theme */
+@media (prefers-color-scheme: light) {
+    :root {
+        --color-text: #EEEEEE;
+        --color-text-dimmed: #666666;
+        --color-text-bright: #FFFFFF;
+        --color-background: #000000;
+    }
+}
+
+/* Responsive Design - Tablet */
+@media (max-width: 768px) {
+    :root {
+        --font-size-base: 16px;
+        --font-size-small: 14px;
+        --font-size-large: 18px;
+        --gap-body-top: 20px;
+        --gap-modules: 15px;
+        --stop-column-width: 150px;
+        --time-column-width: 40px;
+        --time-column-gap: 8px;
+    }
+
+    .MMM-Resseltrafiken .title img {
+        height: 40px;
+    }
+
+    #app {
+        padding: 10px;
+    }
+}
+
+/* Responsive Design - Mobile */
+@media (max-width: 480px) {
+    :root {
+        --stop-column-width: 120px;
+        --time-column-width: 35px;
+        --time-column-gap: 6px;
+    }
+
+    .MMM-Resseltrafiken .title img {
+        height: 30px;
+    }
+}
+
+/* Accessibility Enhancements */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* Focus Styles */
+.MMM-Resseltrafiken .times span:focus {
+    outline: 2px solid var(--color-highlight-yellow);
+    outline-offset: 2px;
+}
+
+/* Print Styles */
+@media print {
+    .MMM-Resseltrafiken {
+        background: white;
+        color: black;
+    }
+
+    .MMM-Resseltrafiken::after,
+    .MMM-Resseltrafiken .timetable::after {
+        display: none;
+    }
+}
