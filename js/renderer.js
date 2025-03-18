@@ -17,11 +17,16 @@
 class Renderer {
     /**
      * Initializes the Renderer with configuration
-     * @param {Object} config Configuration object
+     * @param {Object} config Configuration object containing displayOptions
      */
     constructor(config) {
         this.config = config;
         this.setupStyles();
+        
+        // Bind methods to ensure proper 'this' context
+        this.createWrapper = this.createWrapper.bind(this);
+        this.createTimetable = this.createTimetable.bind(this);
+        this.setupOverflowObservers = this.setupOverflowObservers.bind(this);
     }
 
     /**
@@ -54,6 +59,7 @@ class Renderer {
         const notification = document.createElement("div");
         notification.className = `notification ${type}`;
         notification.setAttribute('role', 'alert');
+        notification.setAttribute('aria-live', 'polite');
         notification.innerHTML = message;
         wrapper.appendChild(notification);
     }
@@ -89,6 +95,8 @@ class Renderer {
         icon.src = "icons/boat.png";
         icon.alt = "Båtikon";
         icon.setAttribute('role', 'presentation');
+        icon.setAttribute('width', '50');
+        icon.setAttribute('height', '50');
         titleElement.appendChild(icon);
         
         titleSection.appendChild(titleElement);
@@ -136,26 +144,58 @@ class Renderer {
 
         // Find next departure for highlighted stop
         const timeHandler = new TimeHandler();
-        const nextDeparture = stop === highlightStop ? 
-            times.find(timeObj => timeHandler.timeToMinutes(timeObj.time) > timeHandler.timeToMinutes(currentTime))?.time : null;
+        const currentTimeMinutes = timeHandler.timeToMinutes(currentTime);
+        
+        // Hitta nästa avgång, antingen idag eller imorgon
+        let nextDepartureObj = null;
+        if (stop === highlightStop) {
+            // Först leta efter nästa avgång som är från idag
+            nextDepartureObj = times.find(timeObj => 
+                timeObj.isToday && 
+                timeHandler.timeToMinutes(timeObj.time) > currentTimeMinutes
+            );
+            
+            // Om ingen avgång hittades idag, ta den första avgången imorgon
+            if (!nextDepartureObj) {
+                nextDepartureObj = times.find(timeObj => !timeObj.isToday);
+            }
+        }
 
         // Add individual time elements
         times.forEach(timeObj => {
             const timeElement = document.createElement("span");
             timeElement.textContent = timeObj.time;
             timeElement.setAttribute('role', 'cell');
+            timeElement.setAttribute('tabindex', '0');
             
             if (!timeObj.isToday) {
                 timeElement.classList.add("tomorrow-time");
                 timeElement.setAttribute('aria-label', `I morgon ${timeObj.time}`);
             }
 
-            if (stop === highlightStop && timeObj.time === nextDeparture) {
-                const totalMinutes = timeHandler.timeToMinutes(timeObj.time) - timeHandler.timeToMinutes(currentTime);
+            // Markera nästa avgång med grön eller gul ram
+            if (stop === highlightStop && nextDepartureObj && timeObj.time === nextDepartureObj.time && timeObj.isToday === nextDepartureObj.isToday) {
+                let totalMinutes;
+                
+                if (timeObj.isToday) {
+                    // För dagens avgångar - beräkna minuter från nu till avgång
+                    totalMinutes = timeHandler.timeToMinutes(timeObj.time) - currentTimeMinutes;
+                } else {
+                    // För morgondagens avgångar - räkna med att den är mer än 10 minuter bort
+                    totalMinutes = 24 * 60 + timeHandler.timeToMinutes(timeObj.time) - currentTimeMinutes;
+                }
+                
                 const highlightClass = totalMinutes <= 10 ? "highlight-yellow" : "highlight-green";
                 timeElement.classList.add(highlightClass);
                 
-                const timeDescription = totalMinutes <= 10 ? "Snar avgång" : "Nästa avgång";
+                // Anpassa tillgänglighetsbeskrivningen
+                let timeDescription;
+                if (!timeObj.isToday) {
+                    timeDescription = "Morgondagens första avgång";
+                } else {
+                    timeDescription = totalMinutes <= 10 ? "Snar avgång" : "Nästa avgång";
+                }
+                
                 timeElement.setAttribute('aria-label', `${timeDescription} ${timeObj.time}`);
             }
 
@@ -183,11 +223,16 @@ class Renderer {
 
         const highlightStopToUse = customHighlightStop || this.config.highlightStop;
 
-        // Create rows for each stop
-        Object.entries(schedule.departures || {}).forEach(([stop, times]) => {
-            const row = this.createDepartureRow(stop, times, currentTime, highlightStopToUse);
-            container.appendChild(row);
-        });
+        try {
+            // Create rows for each stop
+            Object.entries(schedule.departures || {}).forEach(([stop, times]) => {
+                const row = this.createDepartureRow(stop, times, currentTime, highlightStopToUse);
+                container.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Error creating timetable rows:', error);
+            this.createNotification(container, 'Kunde inte visa alla avgångar', 'error');
+        }
 
         return container;
     }
@@ -199,9 +244,14 @@ class Renderer {
     checkOverflow(element) {
         if (element.scrollHeight > element.clientHeight) {
             element.classList.add('overflow');
-            element.setAttribute('aria-label', `${element.getAttribute('aria-label')} - Scroll för mer innehåll`);
+            const currentLabel = element.getAttribute('aria-label') || '';
+            if (!currentLabel.includes('Scroll för mer innehåll')) {
+                element.setAttribute('aria-label', `${currentLabel} - Scroll för mer innehåll`);
+            }
         } else {
             element.classList.remove('overflow');
+            const currentLabel = element.getAttribute('aria-label') || '';
+            element.setAttribute('aria-label', currentLabel.replace(' - Scroll för mer innehåll', ''));
         }
     }
 
@@ -216,15 +266,30 @@ class Renderer {
             timetables.forEach(table => this.checkOverflow(table));
             
             // Create observer for dynamic changes
-            const observer = new MutationObserver(() => {
-                timetables.forEach(table => this.checkOverflow(table));
+            const observer = new ResizeObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.target.classList.contains('timetable')) {
+                        this.checkOverflow(entry.target);
+                    }
+                });
             });
             
-            observer.observe(wrapper, {
-                childList: true,
-                subtree: true,
-                characterData: true
+            // Observe each timetable
+            timetables.forEach(table => observer.observe(table));
+            
+            // Clean up observer when wrapper is removed
+            const cleanup = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    mutation.removedNodes.forEach(node => {
+                        if (node === wrapper) {
+                            observer.disconnect();
+                            cleanup.disconnect();
+                        }
+                    });
+                });
             });
+            
+            cleanup.observe(wrapper.parentNode, { childList: true });
         }, 0);
     }
 }
