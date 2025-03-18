@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         updateInterval: 60000,           // Update interval in milliseconds
         showBothDirections: true,        // Show both outbound and return trips
         highlightStop: "Lumabryggan",    // Stop to highlight in the UI
+        cityHighlightStop: "Lumabryggan", // Stop to highlight for city line (to city)
         cityReturnStop: "Nybroplan",     // Return stop to highlight for city direction
         maxVisibleDepartures: 9,         // Maximum number of visible departures per stop
         dataPaths: {                     // Paths to timetable data - ÄNDRAD TILL RELATIVA SÖKVÄGAR
@@ -193,7 +194,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 renderer.createTimetable(
                     { departures: processedDepartures },
                     "Sjöstadstrafiken",
-                    scheduleDisplayName
+                    scheduleDisplayName,
+                    config.highlightStop
                 )
             );
         }
@@ -261,7 +263,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     { departures: processedToCity },
                     "M/S Emelie → City",
                     scheduleDisplayName,
-                    config.highlightStop
+                    config.cityHighlightStop // Använd cityHighlightStop istället
                 )
             );
 
@@ -303,7 +305,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     { departures: processedToCity },
                     "M/S Emelie → City",
                     scheduleDisplayName,
-                    config.highlightStop
+                    config.cityHighlightStop // Använd cityHighlightStop istället
                 )
             );
 

@@ -50,9 +50,6 @@
     <meta name="apple-mobile-web-app-title" content="Resseltrafiken">
 </head>
 <body>
-    <!-- Skip Navigation for Accessibility -->
-    <a href="#app" class="skip-link">Hoppa till innehåll</a>
-    
     <!-- Main Application Container -->
     <div id="app" role="main" aria-live="polite">
         <!-- Content will be dynamically inserted here -->
@@ -107,7 +104,7 @@
             }
         });
 
-        // Service Worker Registration - ÄNDRAD SÖKVÄG FÖR GITHUB PAGES
+        // Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./service-worker.js')
