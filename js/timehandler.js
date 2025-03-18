@@ -6,11 +6,12 @@
  * schedule types, and time conversions.
  * 
  * Version History:
+ * 2.1.0 (2025-03-18) - Updated to handle seasonal timetables and special holiday rules
  * 2.0.0 (2025-01-16) - Converted to static web module, improved holiday handling
  * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 2.0.0
+ * @version 2.1.0
  * @license MIT
  */
 
@@ -80,6 +81,17 @@ class TimeHandler {
     }
 
     /**
+     * Calculates Ascension Day (Kristi himmelsfärdsdag)
+     * 40 days after Easter Sunday (which includes Easter Sunday itself)
+     * @param {number} year The year to calculate for
+     * @returns {Date} Ascension Day date
+     */
+    calculateAscensionDay(year) {
+        const easter = this.calculateEaster(year);
+        return this.addDays(easter, 39); // 40 days including Easter Sunday itself
+    }
+
+    /**
      * Calculates Midsummer Eve (Friday between June 19-25)
      * In Sweden, Midsummer Eve is always celebrated on a Friday
      * @param {number} year The year to calculate Midsummer for
@@ -104,6 +116,18 @@ class TimeHandler {
     }
 
     /**
+     * Formats date to YYYY-MM-DD string for exact date matching
+     * @param {Date} date Date to format
+     * @returns {string} Date in YYYY-MM-DD format
+     */
+    formatFullDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    /**
      * Adds specified number of days to a date
      * @param {Date} date Starting date
      * @param {number} days Number of days to add (can be negative)
@@ -124,12 +148,13 @@ class TimeHandler {
     getVariableHolidays(year) {
         const easter = this.calculateEaster(year);
         const midsummer = this.calculateMidsummer(year);
+        const ascensionDay = this.calculateAscensionDay(year);
         
         return {
             [this.formatDate(easter)]: "Påskdagen",
             [this.formatDate(this.addDays(easter, -2))]: "Långfredagen",
             [this.formatDate(this.addDays(easter, 1))]: "Annandag påsk",
-            [this.formatDate(this.addDays(easter, 39))]: "Kristi himmelsfärdsdag",
+            [this.formatDate(ascensionDay)]: "Kristi himmelsfärdsdag",
             [this.formatDate(this.addDays(easter, 49))]: "Pingstdagen",
             [this.formatDate(midsummer)]: "Midsommarafton",
             [this.formatDate(this.addDays(midsummer, 1))]: "Midsommardagen"
@@ -138,12 +163,14 @@ class TimeHandler {
 
     /**
      * Checks if a specific date is a holiday
-     * Combines both fixed and variable holidays
+     * Combines both fixed and variable holidays as well as configuration-specific holidays
      * @param {Date} date Date to check
+     * @param {Object} timetable Current timetable data
      * @returns {boolean} True if date is a holiday
      */
-    isHoliday(date) {
+    isHoliday(date, timetable) {
         const formatted = this.formatDate(date);
+        const fullFormatted = this.formatFullDate(date);
         const year = date.getFullYear();
         
         // Check fixed holidays first
@@ -151,9 +178,35 @@ class TimeHandler {
             return true;
         }
 
-        // Then check variable holidays
+        // Check variable holidays
         const variableHolidays = this.getVariableHolidays(year);
-        return !!variableHolidays[formatted];
+        if (variableHolidays[formatted]) {
+            return true;
+        }
+
+        // Check specific holiday dates from city line data if available
+        if (timetable && timetable.city && timetable.city.metadata && timetable.city.metadata.holiday_rules) {
+            const rules = timetable.city.metadata.holiday_rules;
+            
+            // Check dates with no traffic (these are typically major holidays)
+            if (rules.no_traffic && rules.no_traffic.includes(fullFormatted)) {
+                return true;
+            }
+            
+            // Check dates that follow weekend schedule
+            if (rules.weekend_schedule && rules.weekend_schedule.includes(fullFormatted)) {
+                return true;
+            }
+        }
+
+        // Special handling for 2025 spring timetable
+        if (fullFormatted === "2025-05-01" || // Första maj
+            fullFormatted === "2025-05-29" || // Kristi himmelsfärd (2025)
+            fullFormatted === "2025-06-06") { // Nationaldagen
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -166,32 +219,143 @@ class TimeHandler {
         const currentTime = now.getHours() * 60 + now.getMinutes();
         const scheduleType = this.getBasicScheduleType();
         
-        if (!timetable || !timetable.routes) {
+        if (!timetable || !timetable.sjo || !timetable.city) {
             return false;
         }
 
         let latestDeparture = "00:00";
 
-        // Check Sjöstadstrafiken departures
-        const sjoSchedule = timetable.routes.sjo_staden.schedule[scheduleType];
-        Object.values(sjoSchedule).forEach(times => {
-            const lastTime = times[times.length - 1];
-            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
-                latestDeparture = lastTime;
+        try {
+            // Try to find the latest departure time across all routes
+            // First check Sjöstadstrafiken departures
+            if (timetable.sjo.schedules && timetable.sjo.schedules[scheduleType] && timetable.sjo.schedules[scheduleType].departures) {
+                const sjoSchedule = timetable.sjo.schedules[scheduleType].departures;
+                Object.values(sjoSchedule).forEach(times => {
+                    const lastTime = times[times.length - 1];
+                    if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
+                        latestDeparture = lastTime;
+                    }
+                });
             }
-        });
 
-        // Check Emelietrafiken departures
-        const emelieRoutes = timetable.routes.city_line.directions;
-        Object.values(emelieRoutes).forEach(direction => {
-            const schedule = direction[`${scheduleType}_schedule`].departures;
-            Object.values(schedule).forEach(times => {
-                const lastTime = times[times.length - 1];
-                if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
-                    latestDeparture = lastTime;
+            // Check Emelietrafiken departures - handle different schedule formats
+            const citySchedule = timetable.city.schedules[scheduleType];
+            if (scheduleType === 'weekday') {
+                // Check all schedule segments for weekday
+                if (citySchedule.to_city) {
+                    // Check morning schedule
+                    if (citySchedule.to_city.morning && citySchedule.to_city.morning.departures) {
+                        Object.values(citySchedule.to_city.morning.departures).forEach(times => {
+                            const lastTime = times[times.length - 1];
+                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
+                                latestDeparture = lastTime;
+                            }
+                        });
+                    }
+                    
+                    // Check lunch schedule if it exists (Spring 2025)
+                    if (citySchedule.to_city.lunch && citySchedule.to_city.lunch.departures) {
+                        Object.values(citySchedule.to_city.lunch.departures).forEach(times => {
+                            const lastTime = times[times.length - 1];
+                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
+                                latestDeparture = lastTime;
+                            }
+                        });
+                    }
+                    
+                    // Check afternoon schedule
+                    if (citySchedule.to_city.afternoon && citySchedule.to_city.afternoon.departures) {
+                        Object.values(citySchedule.to_city.afternoon.departures).forEach(times => {
+                            const lastTime = times[times.length - 1];
+                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
+                                latestDeparture = lastTime;
+                            }
+                        });
+                    }
                 }
-            });
-        });
+                
+                if (citySchedule.from_city) {
+                    // Check morning schedule
+                    if (citySchedule.from_city.morning && citySchedule.from_city.morning.departures) {
+                        Object.values(citySchedule.from_city.morning.departures).forEach(times => {
+                            const lastTime = times[times.length - 1];
+                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
+                                latestDeparture = lastTime;
+                            }
+                        });
+                    }
+                    
+                    // Check lunch schedule if it exists (Spring 2025)
+                    if (citySchedule.from_city.lunch && citySchedule.from_city.lunch.departures) {
+                        Object.values(citySchedule.from_city.lunch.departures).forEach(times => {
+                            const lastTime = times[times.length - 1];
+                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
+                                latestDeparture = lastTime;
+                            }
+                        });
+                    }
+                    
+                    // Check afternoon schedule
+                    if (citySchedule.from_city.afternoon && citySchedule.from_city.afternoon.departures) {
+                        Object.values(citySchedule.from_city.afternoon.departures).forEach(times => {
+                            const lastTime = times[times.length - 1];
+                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
+                                latestDeparture = lastTime;
+                            }
+                        });
+                    }
+                }
+            } else {
+                // Handle weekend schedule - checking for the Spring 2025 format first
+                if (citySchedule.saturday && citySchedule.sunday) {
+                    // Spring 2025 format with separate weekend schedules
+                    const today = new Date();
+                    const isSaturday = today.getDay() === 6;
+                    const weekendSchedule = isSaturday ? citySchedule.saturday : citySchedule.sunday;
+                    
+                    if (weekendSchedule.to_city && weekendSchedule.to_city.departures) {
+                        Object.values(weekendSchedule.to_city.departures).forEach(times => {
+                            const lastTime = times[times.length - 1];
+                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
+                                latestDeparture = lastTime;
+                            }
+                        });
+                    }
+                    
+                    if (weekendSchedule.from_city && weekendSchedule.from_city.departures) {
+                        Object.values(weekendSchedule.from_city.departures).forEach(times => {
+                            const lastTime = times[times.length - 1];
+                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
+                                latestDeparture = lastTime;
+                            }
+                        });
+                    }
+                } else {
+                    // Standard format
+                    if (citySchedule.to_city && citySchedule.to_city.departures) {
+                        Object.values(citySchedule.to_city.departures).forEach(times => {
+                            const lastTime = times[times.length - 1];
+                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
+                                latestDeparture = lastTime;
+                            }
+                        });
+                    }
+                    
+                    if (citySchedule.from_city && citySchedule.from_city.departures) {
+                        Object.values(citySchedule.from_city.departures).forEach(times => {
+                            const lastTime = times[times.length - 1];
+                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
+                                latestDeparture = lastTime;
+                            }
+                        });
+                    }
+                }
+            }
+
+        } catch (error) {
+            console.error('Error checking last departure:', error);
+            return false;
+        }
 
         return currentTime > this.timeToMinutes(latestDeparture);
     }
@@ -215,7 +379,7 @@ class TimeHandler {
         const now = new Date();
         
         // Check if current time is a holiday
-        if (this.isHoliday(now)) {
+        if (this.isHoliday(now, timetable)) {
             return "weekend";
         }
 
@@ -224,7 +388,7 @@ class TimeHandler {
             const tomorrow = new Date(now);
             tomorrow.setDate(tomorrow.getDate() + 1);
             
-            if (this.isHoliday(tomorrow)) {
+            if (this.isHoliday(tomorrow, timetable)) {
                 return "weekend";
             }
             
@@ -326,7 +490,7 @@ class TimeHandler {
                 const pastDepartures = processedTimes
                     .slice(Math.max(0, nextDepartureIndex - remainingSlots), nextDepartureIndex)
                     .reverse();
-                selectedTimes = [...selectedTimes, ...pastDepartures];
+                selectedTimes = [...pastDepartures, ...selectedTimes];
             }
         }
 

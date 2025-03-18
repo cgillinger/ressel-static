@@ -6,11 +6,12 @@
  * and handles the overall application lifecycle.
  * 
  * Version History:
+ * 2.1.0 (2025-03-18) - Added support for seasonal timetables
  * 2.0.0 (2025-01-16) - Converted to static web application
  * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 2.0.0
+ * @version 2.1.0
  * @license MIT
  */
 
@@ -26,9 +27,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         cityHighlightStop: "Lumabryggan", // Stop to highlight for city line (to city)
         cityReturnStop: "Nybroplan",     // Return stop to highlight for city direction
         maxVisibleDepartures: 9,         // Maximum number of visible departures per stop
-        dataPaths: {                     // Paths to timetable data - ÄNDRAD TILL RELATIVA SÖKVÄGAR
+        dataPaths: {                     // Paths to timetable data 
             sjo: './data/ressel-sjo.json',
-            city: './data/ressel-city.json'
+            city: './data/ressel-city.json',
+            citySpring: './data/ressel-city-spring-2025.json' // Spring timetable for 2025
         },
         debug: false                     // Enable debug logging
     };
@@ -52,6 +54,29 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
+     * Determines which timetable file to use based on the current date
+     * @returns {Object} An object with the paths to use for each service
+     */
+    function determineTimeTablePaths() {
+        const now = new Date();
+        const paths = {
+            sjo: config.dataPaths.sjo,
+            city: config.dataPaths.city
+        };
+
+        // Spring timetable for M/S Emelie (April 22 - June 19, 2025)
+        const springStart = new Date('2025-04-22T00:00:00');
+        const springEnd = new Date('2025-06-20T00:00:00'); // End date is inclusive
+
+        if (now >= springStart && now < springEnd) {
+            debugLog('Using Spring 2025 timetable for Emelietrafiken');
+            paths.city = config.dataPaths.citySpring;
+        }
+
+        return paths;
+    }
+
+    /**
      * Loads and validates the timetable data
      * @returns {Promise<Object>} The parsed and validated timetable data
      * @throws {Error} If data cannot be loaded or is invalid
@@ -60,10 +85,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
             debugLog('Loading timetable data...');
             
+            // Determine which timetable files to use
+            const paths = determineTimeTablePaths();
+            debugLog('Using timetable paths:', paths);
+
             // Load both JSON files
             const [sjoResponse, cityResponse] = await Promise.all([
-                fetch(config.dataPaths.sjo),
-                fetch(config.dataPaths.city)
+                fetch(paths.sjo),
+                fetch(paths.city)
             ]);
             
             if (!sjoResponse.ok || !cityResponse.ok) {
@@ -115,11 +144,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         debugLog('Data validation complete', {
             sjo: {
-                version: sjoData._metadata.version,
+                version: sjoData._metadata?.version || 'Unknown',
                 validPeriod: `${sjoValidFrom.toLocaleDateString()} - ${sjoValidTo.toLocaleDateString()}`
             },
             city: {
-                version: cityData._metadata.version,
+                version: cityData._metadata?.version || 'Unknown',
                 validPeriod: `${cityValidFrom.toLocaleDateString()} - ${cityValidTo.toLocaleDateString()}`
             }
         });
@@ -147,12 +176,35 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
             debugLog('Updating display...');
             const scheduleType = timeHandler.getScheduleType(timetable);
+            
+            // Add timetable validity information
+            addValidityInfo(wrapper, timetable);
+            
             renderTimetables(wrapper, timetable, scheduleType);
             renderer.setupOverflowObservers(wrapper);
             appElement.appendChild(wrapper);
             debugLog('Display update complete');
         } catch (error) {
             handleError(error, 'Fel vid uppdatering av display');
+        }
+    }
+
+    /**
+     * Adds timetable validity information to the display
+     * @param {HTMLElement} wrapper - The container element
+     * @param {Object} timetable - The timetable data
+     */
+    function addValidityInfo(wrapper, timetable) {
+        const cityData = timetable.city;
+        
+        if (cityData.metadata && cityData.metadata.valid_period) {
+            const validFrom = new Date(cityData.metadata.valid_period.start);
+            const validTo = new Date(cityData.metadata.valid_period.end);
+            
+            const infoElement = document.createElement("div");
+            infoElement.className = "validity-info";
+            infoElement.innerHTML = `Aktuell tidtabell gäller: ${validFrom.toLocaleDateString('sv-SE')} - ${validTo.toLocaleDateString('sv-SE')}`;
+            wrapper.appendChild(infoElement);
         }
     }
 
@@ -202,8 +254,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
-     * Merges morning and afternoon departures for city line
-     * @param {Object} schedule - Schedule containing morning and afternoon departures
+     * Merges morning, lunch and afternoon departures for city line
+     * @param {Object} schedule - Schedule containing different time periods
      * @returns {Object} Merged departures
      */
     function mergeCityLineDepartures(schedule) {
@@ -211,6 +263,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Helper function to process departures
         const processDepartures = (departures) => {
+            if (!departures) return;
             Object.entries(departures).forEach(([stop, times]) => {
                 if (!mergedDepartures[stop]) {
                     mergedDepartures[stop] = [];
@@ -224,6 +277,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             processDepartures(schedule.morning.departures);
         }
 
+        // Process lunch departures if they exist (added in Spring 2025 schedule)
+        if (schedule.lunch && schedule.lunch.departures) {
+            processDepartures(schedule.lunch.departures);
+        }
+
         // Process afternoon departures if they exist
         if (schedule.afternoon && schedule.afternoon.departures) {
             processDepartures(schedule.afternoon.departures);
@@ -235,6 +293,29 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
 
         return mergedDepartures;
+    }
+
+    /**
+     * Process weekend schedule based on day of week (Saturday/Sunday)
+     * Special handling for spring 2025 timetable which has separate weekend schedules
+     * @param {Object} timetable - The timetable data
+     * @param {string} direction - Direction (to_city or from_city)
+     * @returns {Object} The processed weekend schedule
+     */
+    function processWeekendSchedule(timetable, direction) {
+        // Check if timetable has separate weekend schedules for Saturday and Sunday
+        if (timetable.schedules.weekend.saturday && timetable.schedules.weekend.sunday) {
+            // Spring 2025 format with separate day schedules
+            const now = new Date();
+            const isSaturday = now.getDay() === 6;
+            
+            return isSaturday 
+                ? timetable.schedules.weekend.saturday[direction].departures
+                : timetable.schedules.weekend.sunday[direction].departures;
+        }
+        
+        // Standard format with combined weekend schedule
+        return timetable.schedules.weekend[direction].departures;
     }
 
     /**
@@ -263,7 +344,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     { departures: processedToCity },
                     "M/S Emelie → City",
                     scheduleDisplayName,
-                    config.cityHighlightStop // Använd cityHighlightStop istället
+                    config.cityHighlightStop 
                 )
             );
 
@@ -287,9 +368,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 );
             }
         } else {
-            // Weekend schedule is already in the correct format
-            const toCity = timetable.schedules.weekend.to_city.departures;
-            const fromCity = timetable.schedules.weekend.from_city.departures;
+            // Weekend schedule handling
+            const toCity = processWeekendSchedule(timetable, 'to_city');
+            const fromCity = processWeekendSchedule(timetable, 'from_city');
 
             // Process and render outbound route
             const processedToCity = {};
@@ -305,7 +386,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     { departures: processedToCity },
                     "M/S Emelie → City",
                     scheduleDisplayName,
-                    config.cityHighlightStop // Använd cityHighlightStop istället
+                    config.cityHighlightStop
                 )
             );
 
@@ -356,16 +437,42 @@ document.addEventListener('DOMContentLoaded', async function() {
         setInterval(() => {
             try {
                 debugLog('Running periodic update');
-                updateDisplay(timetable);
+                
+                // Check if we need to reload timetable data (e.g., day change)
+                const now = new Date();
+                const paths = determineTimeTablePaths();
+                const currentCityPath = paths.city;
+                
+                // If timetable has changed, reload it
+                if (currentCityPath !== lastLoadedCityPath) {
+                    debugLog('Timetable changed, reloading data');
+                    loadTimetableData().then(newData => {
+                        if (newData) {
+                            timetableData = newData;
+                            lastLoadedCityPath = currentCityPath;
+                            updateDisplay(timetableData);
+                        }
+                    });
+                } else {
+                    // Just update the display with current data
+                    updateDisplay(timetable);
+                }
             } catch (error) {
                 handleError(error, 'Kunde inte uppdatera tidtabellen');
             }
         }, config.updateInterval);
     }
 
+    // Track which timetable was last loaded
+    let lastLoadedCityPath = '';
+
     // Initialize the application
     try {
         debugLog('Initializing application...');
+        
+        // Determine initial timetable paths
+        const initialPaths = determineTimeTablePaths();
+        lastLoadedCityPath = initialPaths.city;
         
         // Load initial data
         timetableData = await loadTimetableData();
