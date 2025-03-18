@@ -4,7 +4,7 @@
   "description": "Tidtabeller för Sjöstadstrafiken och M/S Emelie båtlinjer i Stockholm",
   "version": "2.0.0",
   "author": "Christian Gillinger",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
@@ -37,14 +37,14 @@
       "name": "Sjöstadstrafiken",
       "short_name": "Sjöstaden",
       "description": "Visa Sjöstadstrafikens tidtabell",
-      "url": "/?route=sjostaden",
+      "url": "./?route=sjostaden",
       "icons": [{ "src": "icons/boat.png", "sizes": "192x192" }]
     },
     {
       "name": "M/S Emelie",
       "short_name": "Emelie",
       "description": "Visa M/S Emelies tidtabell",
-      "url": "/?route=emelie",
+      "url": "./?route=emelie",
       "icons": [{ "src": "icons/boat.png", "sizes": "192x192" }]
     }
   ],
@@ -54,14 +54,14 @@
 
   "screenshots": [
     {
-      "src": "/api/placeholder/1080/2340",
+      "src": "./api/placeholder/1080/2340",
       "sizes": "1080x2340",
       "type": "image/png",
       "platform": "narrow",
       "label": "Resseltrafiken på mobil"
     },
     {
-      "src": "/api/placeholder/2048/1536",
+      "src": "./api/placeholder/2048/1536",
       "sizes": "2048x1536",
       "type": "image/png",
       "platform": "wide",
@@ -70,7 +70,7 @@
   ],
 
   "share_target": {
-    "action": "/share-target",
+    "action": "./share-target",
     "method": "GET",
     "params": {
       "title": "title",
@@ -85,12 +85,12 @@
   "dir": "ltr",
   
   "iarc_rating_id": "",
-  "scope": "/",
+  "scope": "./",
   
   "protocol_handlers": [
     {
       "protocol": "web+resseltrafiken",
-      "url": "/?stop=%s"
+      "url": "./?stop=%s"
     }
   ],
 
@@ -99,8 +99,8 @@
   ],
 
   "serviceworker": {
-    "src": "/service-worker.js",
-    "scope": "/",
+    "src": "./service-worker.js",
+    "scope": "./",
     "use_cache": true
   }
 }

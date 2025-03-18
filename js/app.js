@@ -25,11 +25,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         highlightStop: "Lumabryggan",    // Stop to highlight in the UI
         cityReturnStop: "Nybroplan",     // Return stop to highlight for city direction
         maxVisibleDepartures: 9,         // Maximum number of visible departures per stop
-        dataPath: 'data/Ressel.json',    // Path to timetable data
+        dataPaths: {                     // Paths to timetable data - ÄNDRAD TILL RELATIVA SÖKVÄGAR
+            sjo: './data/ressel-sjo.json',
+            city: './data/ressel-city.json'
+        },
         debug: false                     // Enable debug logging
     };
 
-    let timetableData = null;            // Holds the current timetable data
+    let timetableData = {
+        sjo: null,
+        city: null
+    };
     const timeHandler = new TimeHandler();
     const renderer = new Renderer(config);
 
@@ -52,16 +58,27 @@ document.addEventListener('DOMContentLoaded', async function() {
     async function loadTimetableData() {
         try {
             debugLog('Loading timetable data...');
-            const response = await fetch(config.dataPath);
             
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            // Load both JSON files
+            const [sjoResponse, cityResponse] = await Promise.all([
+                fetch(config.dataPaths.sjo),
+                fetch(config.dataPaths.city)
+            ]);
+            
+            if (!sjoResponse.ok || !cityResponse.ok) {
+                throw new Error(`HTTP error! status: ${sjoResponse.status} / ${cityResponse.status}`);
             }
 
-            const data = await response.json();
-            validateTimetableData(data);
+            const sjoData = await sjoResponse.json();
+            const cityData = await cityResponse.json();
+
+            validateTimetableData(sjoData, cityData);
             debugLog('Timetable data loaded successfully');
-            return data;
+            
+            return {
+                sjo: sjoData,
+                city: cityData
+            };
         } catch (error) {
             console.error('Error loading timetable:', error);
             handleError(error, 'Kunde inte ladda tidtabellsdata');
@@ -71,26 +88,39 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     /**
      * Validates the structure and content of timetable data
-     * @param {Object} data - The timetable data to validate
+     * @param {Object} sjoData - The Sjöstadstrafiken timetable data
+     * @param {Object} cityData - The City Line timetable data
      * @throws {Error} If data structure is invalid
      */
-    function validateTimetableData(data) {
-        if (!data.metadata || !data.routes) {
+    function validateTimetableData(sjoData, cityData) {
+        if (!sjoData.metadata || !cityData.metadata) {
             throw new Error('Ogiltig datastruktur i tidtabellen');
         }
 
-        // Validate version and period
-        const validFrom = new Date(data.metadata.valid_period.start_date);
-        const validTo = new Date(data.metadata.valid_period.end_date);
+        // Validate version and period for both services
         const now = new Date();
         
-        if (now > validTo) {
+        // Validate Sjöstadstrafiken period
+        const sjoValidFrom = new Date(sjoData.metadata.valid_period.start);
+        const sjoValidTo = new Date(sjoData.metadata.valid_period.end);
+        
+        // Validate City Line period
+        const cityValidFrom = new Date(cityData.metadata.valid_period.start);
+        const cityValidTo = new Date(cityData.metadata.valid_period.end);
+        
+        if (now > sjoValidTo || now > cityValidTo) {
             console.warn('Varning: Tidtabellsdata kan vara inaktuell');
         }
 
         debugLog('Data validation complete', {
-            version: data.metadata.version,
-            validPeriod: `${validFrom.toLocaleDateString()} - ${validTo.toLocaleDateString()}`
+            sjo: {
+                version: sjoData._metadata.version,
+                validPeriod: `${sjoValidFrom.toLocaleDateString()} - ${sjoValidTo.toLocaleDateString()}`
+            },
+            city: {
+                version: cityData._metadata.version,
+                validPeriod: `${cityValidFrom.toLocaleDateString()} - ${cityValidTo.toLocaleDateString()}`
+            }
         });
     }
 
@@ -108,7 +138,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         appElement.innerHTML = '';
         const wrapper = renderer.createWrapper();
 
-        if (!timetable) {
+        if (!timetable || !timetable.sjo || !timetable.city) {
             handleError(null, 'Ingen tidtabellsdata tillgänglig');
             return;
         }
@@ -135,10 +165,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         const scheduleDisplayName = timeHandler.getScheduleDisplayName(scheduleType);
 
         // Render Sjöstadstrafiken schedules
-        renderSjostadsTimetable(wrapper, timetable, scheduleType, scheduleDisplayName);
+        renderSjostadsTimetable(wrapper, timetable.sjo, scheduleType, scheduleDisplayName);
 
         // Render Emelietrafiken schedules
-        renderEmelieTimetables(wrapper, timetable, scheduleType, scheduleDisplayName);
+        renderEmelieTimetables(wrapper, timetable.city, scheduleType, scheduleDisplayName);
     }
 
     /**
@@ -149,7 +179,7 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @param {string} scheduleDisplayName - Display name for schedule type
      */
     function renderSjostadsTimetable(wrapper, timetable, scheduleType, scheduleDisplayName) {
-        const sjoStadsSchedule = timetable.routes.sjo_staden.schedule[scheduleType];
+        const sjoStadsSchedule = timetable.schedules[scheduleType].departures;
         if (sjoStadsSchedule) {
             const processedDepartures = {};
             for (const [stop, times] of Object.entries(sjoStadsSchedule)) {
@@ -170,6 +200,42 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
+     * Merges morning and afternoon departures for city line
+     * @param {Object} schedule - Schedule containing morning and afternoon departures
+     * @returns {Object} Merged departures
+     */
+    function mergeCityLineDepartures(schedule) {
+        const mergedDepartures = {};
+        
+        // Helper function to process departures
+        const processDepartures = (departures) => {
+            Object.entries(departures).forEach(([stop, times]) => {
+                if (!mergedDepartures[stop]) {
+                    mergedDepartures[stop] = [];
+                }
+                mergedDepartures[stop].push(...times);
+            });
+        };
+
+        // Process morning departures if they exist
+        if (schedule.morning && schedule.morning.departures) {
+            processDepartures(schedule.morning.departures);
+        }
+
+        // Process afternoon departures if they exist
+        if (schedule.afternoon && schedule.afternoon.departures) {
+            processDepartures(schedule.afternoon.departures);
+        }
+
+        // Sort times for each stop
+        Object.keys(mergedDepartures).forEach(stop => {
+            mergedDepartures[stop].sort();
+        });
+
+        return mergedDepartures;
+    }
+
+    /**
      * Renders Emelietrafiken timetables
      * @param {HTMLElement} wrapper - The container element
      * @param {Object} timetable - The timetable data
@@ -177,42 +243,83 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @param {string} scheduleDisplayName - Display name for schedule type
      */
     function renderEmelieTimetables(wrapper, timetable, scheduleType, scheduleDisplayName) {
-        const routes = timetable.routes.city_line.directions;
+        if (scheduleType === 'weekday') {
+            const toCity = mergeCityLineDepartures(timetable.schedules.weekday.to_city);
+            const fromCity = mergeCityLineDepartures(timetable.schedules.weekday.from_city);
 
-        // Process schedule data for rendering
-        const processEmelieSchedule = (schedule) => {
-            const processed = { ...schedule };
-            processed.departures = {};
-            
-            for (const [stop, times] of Object.entries(schedule.departures)) {
-                processed.departures[stop] = timeHandler.processScheduleTimes(
-                    times, 
+            // Process outbound route (to city)
+            const processedToCity = {};
+            Object.entries(toCity).forEach(([stop, times]) => {
+                processedToCity[stop] = timeHandler.processScheduleTimes(
+                    times,
                     config.maxVisibleDepartures
                 );
-            }
-            return processed;
-        };
+            });
 
-        // Render outbound route (to city)
-        const outboundSchedule = routes.Hammarbysjöstad_to_Nybroplan[`${scheduleType}_schedule`];
-        if (outboundSchedule) {
             wrapper.appendChild(
                 renderer.createTimetable(
-                    processEmelieSchedule(outboundSchedule),
+                    { departures: processedToCity },
                     "M/S Emelie → City",
                     scheduleDisplayName,
                     config.highlightStop
                 )
             );
-        }
 
-        // Render return route if configured
-        if (config.showBothDirections) {
-            const returnSchedule = routes.Nybroplan_to_Hammarbysjöstad[`${scheduleType}_schedule`];
-            if (returnSchedule) {
+            // Render return route if configured
+            if (config.showBothDirections) {
+                const processedFromCity = {};
+                Object.entries(fromCity).forEach(([stop, times]) => {
+                    processedFromCity[stop] = timeHandler.processScheduleTimes(
+                        times,
+                        config.maxVisibleDepartures
+                    );
+                });
+
                 wrapper.appendChild(
                     renderer.createTimetable(
-                        processEmelieSchedule(returnSchedule),
+                        { departures: processedFromCity },
+                        "M/S Emelie ← City",
+                        scheduleDisplayName,
+                        config.cityReturnStop
+                    )
+                );
+            }
+        } else {
+            // Weekend schedule is already in the correct format
+            const toCity = timetable.schedules.weekend.to_city.departures;
+            const fromCity = timetable.schedules.weekend.from_city.departures;
+
+            // Process and render outbound route
+            const processedToCity = {};
+            Object.entries(toCity).forEach(([stop, times]) => {
+                processedToCity[stop] = timeHandler.processScheduleTimes(
+                    times,
+                    config.maxVisibleDepartures
+                );
+            });
+
+            wrapper.appendChild(
+                renderer.createTimetable(
+                    { departures: processedToCity },
+                    "M/S Emelie → City",
+                    scheduleDisplayName,
+                    config.highlightStop
+                )
+            );
+
+            // Render return route if configured
+            if (config.showBothDirections) {
+                const processedFromCity = {};
+                Object.entries(fromCity).forEach(([stop, times]) => {
+                    processedFromCity[stop] = timeHandler.processScheduleTimes(
+                        times,
+                        config.maxVisibleDepartures
+                    );
+                });
+
+                wrapper.appendChild(
+                    renderer.createTimetable(
+                        { departures: processedFromCity },
                         "M/S Emelie ← City",
                         scheduleDisplayName,
                         config.cityReturnStop
