@@ -5,12 +5,13 @@
  * Includes dark theme, responsive design, and accessibility features.
  * 
  * Version History:
+ * 2.2.1 (2025-03-20) - Fixed highlight borders alignment issues
  * 2.2.0 (2025-03-19) - Fixed highlighting borders issue, added toggle controls
  * 2.0.0 (2025-01-16) - Converted to static web styles, improved accessibility
  * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 2.2.0
+ * @version 2.2.1
  * @license MIT
  */
 
@@ -258,15 +259,15 @@ body {
 
 /* Individual Time Slot */
 .MMM-Resseltrafiken .times span {
+    display: inline-block;
     width: var(--time-column-width);
     min-width: var(--time-column-width);
     text-align: center;
     color: var(--color-text-bright) !important;
     padding: 2px 4px;
     border-radius: var(--border-radius);
-    position: relative;
-    box-sizing: border-box;
     transition: all var(--transition-speed) ease;
+    position: relative; /* Important for absolute positioning of highlight */
 }
 
 /* Tomorrow Time */
@@ -292,48 +293,61 @@ body {
     border-radius: 2px;
 }
 
-/* Next Departure Highlight - Green - Using pseudo-elements to create the border effect */
-.MMM-Resseltrafiken .times span.highlight-green {
-    position: relative;
-    font-weight: bold;
-    z-index: 1;
+/* FIX: Remove box-sizing from span elements to fix highlight border issues */
+.MMM-Resseltrafiken .times span {
+    box-sizing: content-box;
 }
 
-/* Create border using ::after pseudo-element */
+/* Next Departure Highlight - Green */
+.MMM-Resseltrafiken .times span.highlight-green {
+    font-weight: bold;
+    /* Remove border and use ::after pseudo-element instead */
+    border: none;
+    position: relative;
+}
+
 .MMM-Resseltrafiken .times span.highlight-green::after {
     content: '';
     position: absolute;
+    /* Center position exactly */
     top: -2px;
     left: -2px;
     right: -2px;
     bottom: -2px;
+    /* Create border */
     border: 2px solid var(--color-highlight-green);
     border-radius: var(--border-radius);
-    z-index: -1;
-    pointer-events: none;
     box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+    /* Place behind the text */
+    z-index: -1;
+    /* Prevent interaction with the border */
+    pointer-events: none;
 }
 
-/* Imminent Departure Highlight - Yellow - Using pseudo-elements to create the border effect */
+/* Imminent Departure Highlight - Yellow */
 .MMM-Resseltrafiken .times span.highlight-yellow {
-    position: relative;
     font-weight: bold;
-    z-index: 1;
+    /* Remove border and use ::after pseudo-element instead */
+    border: none;
+    position: relative;
 }
 
-/* Create border using ::after pseudo-element */
 .MMM-Resseltrafiken .times span.highlight-yellow::after {
     content: '';
     position: absolute;
+    /* Center position exactly */
     top: -2px;
     left: -2px;
     right: -2px;
     bottom: -2px;
+    /* Create border */
     border: 2px solid var(--color-highlight-yellow);
     border-radius: var(--border-radius);
-    z-index: -1;
-    pointer-events: none;
     box-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
+    /* Place behind the text */
+    z-index: -1;
+    /* Prevent interaction with the border */
+    pointer-events: none;
 }
 
 /* Notifications */
