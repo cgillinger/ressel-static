@@ -6,13 +6,14 @@
  * and handles the overall application lifecycle.
  * 
  * Version History:
+ * 2.2.1 (2025-03-20) - Fixed toggle controls visibility logic
  * 2.2.0 (2025-03-19) - Added options to show/hide individual timetables
  * 2.1.0 (2025-03-18) - Added support for seasonal timetables
  * 2.0.0 (2025-01-16) - Converted to static web application
  * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 2.2.0
+ * @version 2.2.1
  * @license MIT
  */
 
@@ -282,21 +283,25 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         );
 
-        // Create toggle for both directions
-        const bothDirToggle = createDisplayToggle(
-            'bothdir-toggle',
-            'Visa båda riktningar',
-            config.showBothDirections,
-            (checked) => {
-                config.showBothDirections = checked;
-                updateDisplay(timetableData);
-                updateURLParameter('bothdir', checked ? '1' : '0');
-            }
-        );
-
+        // Add the Sjöstadstrafiken and Emelietrafiken toggles
         controlsContainer.appendChild(sjoToggle);
         controlsContainer.appendChild(emelieToggle);
-        controlsContainer.appendChild(bothDirToggle);
+        
+        // Only add the "Visa båda riktningar" toggle if Emelietrafiken is enabled
+        if (config.showEmelietrafiken) {
+            const bothDirToggle = createDisplayToggle(
+                'bothdir-toggle',
+                'Visa båda riktningar',
+                config.showBothDirections,
+                (checked) => {
+                    config.showBothDirections = checked;
+                    updateDisplay(timetableData);
+                    updateURLParameter('bothdir', checked ? '1' : '0');
+                }
+            );
+            controlsContainer.appendChild(bothDirToggle);
+        }
+
         wrapper.appendChild(controlsContainer);
     }
 
