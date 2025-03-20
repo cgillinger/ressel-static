@@ -1,8 +1,8 @@
 {
-  "name": "Resseltrafiken",
-  "short_name": "Resseltrafiken",
+  "name": "Sjöstadsfärjetrafiken",
+  "short_name": "Sjöstadsfärjer",
   "description": "Tidtabeller för Sjöstadstrafiken och M/S Emelie båtlinjer i Stockholm",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "author": "Christian Gillinger",
   "start_url": "./",
   "display": "standalone",
@@ -37,14 +37,21 @@
       "name": "Sjöstadstrafiken",
       "short_name": "Sjöstaden",
       "description": "Visa Sjöstadstrafikens tidtabell",
-      "url": "./?route=sjostaden",
+      "url": "./?sjo=1&emelie=0",
       "icons": [{ "src": "icons/boat.png", "sizes": "192x192" }]
     },
     {
       "name": "M/S Emelie",
       "short_name": "Emelie",
       "description": "Visa M/S Emelies tidtabell",
-      "url": "./?route=emelie",
+      "url": "./?sjo=0&emelie=1",
+      "icons": [{ "src": "icons/boat.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Alla linjer",
+      "short_name": "Alla",
+      "description": "Visa alla båtlinjers tidtabeller",
+      "url": "./?sjo=1&emelie=1",
       "icons": [{ "src": "icons/boat.png", "sizes": "192x192" }]
     }
   ],
@@ -58,14 +65,14 @@
       "sizes": "1080x2340",
       "type": "image/png",
       "platform": "narrow",
-      "label": "Resseltrafiken på mobil"
+      "label": "Sjöstadsfärjetrafiken på mobil"
     },
     {
       "src": "./api/placeholder/2048/1536",
       "sizes": "2048x1536",
       "type": "image/png",
       "platform": "wide",
-      "label": "Resseltrafiken på surfplatta/dator"
+      "label": "Sjöstadsfärjetrafiken på surfplatta/dator"
     }
   ],
 
@@ -89,7 +96,7 @@
   
   "protocol_handlers": [
     {
-      "protocol": "web+resseltrafiken",
+      "protocol": "web+sjostadsfarja",
       "url": "./?stop=%s"
     }
   ],

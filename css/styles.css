@@ -1,15 +1,16 @@
 /**
- * Resseltrafiken Web Application - Styles
+ * Sjöstadsfärjetrafiken Web Application - Styles
  * 
- * Global styling for the Resseltrafiken application.
+ * Global styling for the Sjöstadsfärjetrafiken application.
  * Includes dark theme, responsive design, and accessibility features.
  * 
  * Version History:
+ * 2.2.0 (2025-03-19) - Fixed highlighting borders issue, added toggle controls
  * 2.0.0 (2025-01-16) - Converted to static web styles, improved accessibility
  * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 2.0.0
+ * @version 2.2.0
  * @license MIT
  */
 
@@ -71,6 +72,70 @@ body {
     padding: 20px;
 }
 
+/* Display Controls */
+.display-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    padding: 15px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius);
+    order: 999; /* Ensure it appears at the bottom */
+}
+
+.toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toggle-container input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 40px;
+    height: 20px;
+    background-color: var(--color-text-dimmed);
+    border-radius: 20px;
+    position: relative;
+    cursor: pointer;
+    transition: background-color var(--transition-speed) ease;
+}
+
+.toggle-container input[type="checkbox"]::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: var(--color-text-bright);
+    top: 2px;
+    left: 2px;
+    transition: transform var(--transition-speed) ease;
+}
+
+.toggle-container input[type="checkbox"]:checked {
+    background-color: var(--color-highlight-green);
+}
+
+.toggle-container input[type="checkbox"]:checked::before {
+    transform: translateX(20px);
+}
+
+.toggle-container label {
+    color: var(--color-text-bright);
+    cursor: pointer;
+}
+
+/* Validity Info */
+.validity-info {
+    margin-bottom: 15px;
+    font-size: var(--font-size-small);
+    color: var(--color-text-dimmed);
+    text-align: left; /* Changed from center to left */
+}
+
 /* Resseltrafiken Module Container */
 .MMM-Resseltrafiken {
     color: var(--color-text-bright);
@@ -80,6 +145,8 @@ body {
     width: 100%;
     height: auto;
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Fade-out gradient for main container */
@@ -107,8 +174,6 @@ body {
     width: fit-content;
     max-width: 100%;
 }
-
-/* Remove fade-out gradient for individual timetable */
 
 /* Show fade-out gradient when content overflows */
 .MMM-Resseltrafiken .timetable.overflow::after {
@@ -199,6 +264,8 @@ body {
     color: var(--color-text-bright) !important;
     padding: 2px 4px;
     border-radius: var(--border-radius);
+    position: relative;
+    box-sizing: border-box;
     transition: all var(--transition-speed) ease;
 }
 
@@ -225,19 +292,47 @@ body {
     border-radius: 2px;
 }
 
-/* Next Departure Highlight - Green */
+/* Next Departure Highlight - Green - Using pseudo-elements to create the border effect */
 .MMM-Resseltrafiken .times span.highlight-green {
-    background-color: transparent;
-    border: 2px solid var(--color-highlight-green);
+    position: relative;
     font-weight: bold;
+    z-index: 1;
+}
+
+/* Create border using ::after pseudo-element */
+.MMM-Resseltrafiken .times span.highlight-green::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border: 2px solid var(--color-highlight-green);
+    border-radius: var(--border-radius);
+    z-index: -1;
+    pointer-events: none;
     box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
 }
 
-/* Imminent Departure Highlight - Yellow */
+/* Imminent Departure Highlight - Yellow - Using pseudo-elements to create the border effect */
 .MMM-Resseltrafiken .times span.highlight-yellow {
-    background-color: transparent;
-    border: 2px solid var(--color-highlight-yellow);
+    position: relative;
     font-weight: bold;
+    z-index: 1;
+}
+
+/* Create border using ::after pseudo-element */
+.MMM-Resseltrafiken .times span.highlight-yellow::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border: 2px solid var(--color-highlight-yellow);
+    border-radius: var(--border-radius);
+    z-index: -1;
+    pointer-events: none;
     box-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
 }
 
@@ -262,7 +357,7 @@ body {
 }
 
 /* Footer Styling */
-.MMM-Resseltrafiken footer {
+footer {
     text-align: center;
     padding: 20px 0;
     color: var(--color-text-dimmed);
@@ -299,6 +394,11 @@ body {
 
     #app {
         padding: 10px;
+    }
+    
+    .display-controls {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
 

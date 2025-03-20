@@ -1,17 +1,18 @@
 /**
- * Resseltrafiken Web Application - Main Application
+ * Sjöstadsfärjetrafiken Web Application - Main Application
  * 
- * This is the main entry point and controller for the Resseltrafiken web application.
+ * This is the main entry point and controller for the Sjöstadsfärjetrafiken web application.
  * It coordinates the TimeHandler and Renderer modules, manages data loading and updates,
  * and handles the overall application lifecycle.
  * 
  * Version History:
+ * 2.2.0 (2025-03-19) - Added options to show/hide individual timetables
  * 2.1.0 (2025-03-18) - Added support for seasonal timetables
  * 2.0.0 (2025-01-16) - Converted to static web application
  * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 2.1.0
+ * @version 2.2.0
  * @license MIT
  */
 
@@ -23,6 +24,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     const config = {
         updateInterval: 60000,           // Update interval in milliseconds
         showBothDirections: true,        // Show both outbound and return trips
+        showSjostadstrafiken: true,      // Show Sjöstadstrafiken timetable
+        showEmelietrafiken: true,        // Show Emelietrafiken (M/S Emelie) timetable
         highlightStop: "Lumabryggan",    // Stop to highlight in the UI
         cityHighlightStop: "Lumabryggan", // Stop to highlight for city line (to city)
         cityReturnStop: "Nybroplan",     // Return stop to highlight for city direction
@@ -35,6 +38,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         debug: false                     // Enable debug logging
     };
 
+    // Try to load config from URL parameters if they exist
+    loadConfigFromURL();
+
     let timetableData = {
         sjo: null,
         city: null
@@ -43,13 +49,51 @@ document.addEventListener('DOMContentLoaded', async function() {
     const renderer = new Renderer(config);
 
     /**
+     * Loads configuration from URL parameters
+     * This allows for easy customization of display without editing code
+     */
+    function loadConfigFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Check for show/hide parameters
+        if (urlParams.has('sjo')) {
+            config.showSjostadstrafiken = urlParams.get('sjo') === '1' || 
+                                          urlParams.get('sjo') === 'true';
+        }
+        
+        if (urlParams.has('emelie')) {
+            config.showEmelietrafiken = urlParams.get('emelie') === '1' || 
+                                        urlParams.get('emelie') === 'true';
+        }
+        
+        // Check for highlight stop parameters
+        if (urlParams.has('highlight')) {
+            config.highlightStop = decodeURIComponent(urlParams.get('highlight'));
+        }
+        
+        if (urlParams.has('cityhighlight')) {
+            config.cityHighlightStop = decodeURIComponent(urlParams.get('cityhighlight'));
+        }
+        
+        if (urlParams.has('returnstop')) {
+            config.cityReturnStop = decodeURIComponent(urlParams.get('returnstop'));
+        }
+        
+        // Check for direction setting
+        if (urlParams.has('bothdir')) {
+            config.showBothDirections = urlParams.get('bothdir') === '1' || 
+                                        urlParams.get('bothdir') === 'true';
+        }
+    }
+
+    /**
      * Logs debug messages if debug mode is enabled
      * @param {string} message - Message to log
      * @param {*} [data] - Optional data to log
      */
     function debugLog(message, data = null) {
         if (config.debug) {
-            console.log(`[Resseltrafiken] ${message}`, data || '');
+            console.log(`[Sjöstadsfärjetrafiken] ${message}`, data || '');
         }
     }
 
@@ -180,13 +224,118 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Add timetable validity information
             addValidityInfo(wrapper, timetable);
             
+            // First render timetables
             renderTimetables(wrapper, timetable, scheduleType);
+            
+            // Then add display controls if needed - they will be at the bottom
+            if (!isEmbedded()) {
+                addDisplayControls(wrapper);
+            }
+            
             renderer.setupOverflowObservers(wrapper);
             appElement.appendChild(wrapper);
             debugLog('Display update complete');
         } catch (error) {
             handleError(error, 'Fel vid uppdatering av display');
         }
+    }
+
+    /**
+     * Checks if the app is running in an embedded mode
+     * @returns {boolean} True if app is embedded
+     */
+    function isEmbedded() {
+        return window.location.search.includes('embedded=true');
+    }
+
+    /**
+     * Adds display control toggles to the wrapper
+     * @param {HTMLElement} wrapper - The container element
+     */
+    function addDisplayControls(wrapper) {
+        const controlsContainer = document.createElement('div');
+        controlsContainer.className = 'display-controls';
+        controlsContainer.setAttribute('role', 'group');
+        controlsContainer.setAttribute('aria-label', 'Visa/dölj tidtabeller');
+
+        // Create toggle for Sjöstadstrafiken
+        const sjoToggle = createDisplayToggle(
+            'sjo-toggle',
+            'Sjöstadstrafiken',
+            config.showSjostadstrafiken,
+            (checked) => {
+                config.showSjostadstrafiken = checked;
+                updateDisplay(timetableData);
+                updateURLParameter('sjo', checked ? '1' : '0');
+            }
+        );
+        
+        // Create toggle for Emelietrafiken
+        const emelieToggle = createDisplayToggle(
+            'emelie-toggle',
+            'M/S Emelie',
+            config.showEmelietrafiken,
+            (checked) => {
+                config.showEmelietrafiken = checked;
+                updateDisplay(timetableData);
+                updateURLParameter('emelie', checked ? '1' : '0');
+            }
+        );
+
+        // Create toggle for both directions
+        const bothDirToggle = createDisplayToggle(
+            'bothdir-toggle',
+            'Visa båda riktningar',
+            config.showBothDirections,
+            (checked) => {
+                config.showBothDirections = checked;
+                updateDisplay(timetableData);
+                updateURLParameter('bothdir', checked ? '1' : '0');
+            }
+        );
+
+        controlsContainer.appendChild(sjoToggle);
+        controlsContainer.appendChild(emelieToggle);
+        controlsContainer.appendChild(bothDirToggle);
+        wrapper.appendChild(controlsContainer);
+    }
+
+    /**
+     * Creates a toggle control for display options
+     * @param {string} id - ID for the toggle element
+     * @param {string} label - Label text
+     * @param {boolean} initialState - Initial checked state
+     * @param {Function} onChange - Change handler function
+     * @returns {HTMLElement} The toggle element
+     */
+    function createDisplayToggle(id, label, initialState, onChange) {
+        const toggleContainer = document.createElement('div');
+        toggleContainer.className = 'toggle-container';
+
+        const toggleInput = document.createElement('input');
+        toggleInput.type = 'checkbox';
+        toggleInput.id = id;
+        toggleInput.checked = initialState;
+        toggleInput.addEventListener('change', (e) => onChange(e.target.checked));
+
+        const toggleLabel = document.createElement('label');
+        toggleLabel.htmlFor = id;
+        toggleLabel.textContent = label;
+
+        toggleContainer.appendChild(toggleInput);
+        toggleContainer.appendChild(toggleLabel);
+        return toggleContainer;
+    }
+
+    /**
+     * Updates a URL parameter without refreshing the page
+     * @param {string} key - Parameter name
+     * @param {string} value - Parameter value
+     */
+    function updateURLParameter(key, value) {
+        const url = new URL(window.location);
+        url.searchParams.set(key, value);
+        window.history.replaceState({}, '', url);
     }
 
     /**
@@ -217,11 +366,24 @@ document.addEventListener('DOMContentLoaded', async function() {
     function renderTimetables(wrapper, timetable, scheduleType) {
         const scheduleDisplayName = timeHandler.getScheduleDisplayName(scheduleType);
 
-        // Render Sjöstadstrafiken schedules
-        renderSjostadsTimetable(wrapper, timetable.sjo, scheduleType, scheduleDisplayName);
+        // Render Sjöstadstrafiken schedules if enabled
+        if (config.showSjostadstrafiken) {
+            renderSjostadsTimetable(wrapper, timetable.sjo, scheduleType, scheduleDisplayName);
+        }
 
-        // Render Emelietrafiken schedules
-        renderEmelieTimetables(wrapper, timetable.city, scheduleType, scheduleDisplayName);
+        // Render Emelietrafiken schedules if enabled
+        if (config.showEmelietrafiken) {
+            renderEmelieTimetables(wrapper, timetable.city, scheduleType, scheduleDisplayName);
+        }
+        
+        // If no timetables are visible, show a message
+        if (!config.showSjostadstrafiken && !config.showEmelietrafiken) {
+            const noDataMessage = document.createElement("div");
+            noDataMessage.className = "notification warning";
+            noDataMessage.textContent = "Inga tidtabeller valda att visa. Aktivera minst en tidtabell från kontrollerna nedan.";
+            noDataMessage.setAttribute('role', 'alert');
+            wrapper.appendChild(noDataMessage);
+        }
     }
 
     /**
