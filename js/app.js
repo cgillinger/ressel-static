@@ -194,8 +194,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (localStorage && !localStorage.getItem('sjostadsfarjetrafiken_settings')) {
             // Check if mobile (<768px)
             if (window.innerWidth < 768) {
-                config.maxVisibleDepartures = 5;
-                document.documentElement.style.setProperty('--visible-departures', 5);
+                config.maxVisibleDepartures = 4;
+                document.documentElement.style.setProperty('--visible-departures', 4);
             } else {
                 // Desktop default stays at 9
                 config.maxVisibleDepartures = 9;
