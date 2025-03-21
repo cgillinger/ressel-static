@@ -6,6 +6,7 @@
  * and handles the overall application lifecycle.
  * 
  * Version History:
+ * 4.1.0 (2025-03-23) - Limited max departures to 7 to prevent display issues
  * 4.0.0 (2025-03-21) - Complete redesign with new JSON structure for day type handling
  * 3.0.0 (2025-03-20) - Added support for separate day types
  * 2.4.0 (2025-03-22) - Added speech synthesis functionality for accessibility
@@ -17,7 +18,7 @@
  * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 4.0.0
+ * @version 4.1.0
  * @license MIT
  */
 
@@ -35,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         highlightStop: "Lumabryggan",    // Stop to highlight in the UI
         cityHighlightStop: "Lumabryggan", // Stop to highlight for city line (to city)
         cityReturnStop: "Nybroplan",     // Return stop to highlight for city direction
-        maxVisibleDepartures: 9,         // Maximum number of visible departures per stop
+        maxVisibleDepartures: 7,         // Maximum number of visible departures per stop (capped at 7)
         dataPaths: {                     // Paths to config files
             sjoConfig: './data/ressel-sjo-config.json',
             cityConfig: './data/ressel-city-config.json'
@@ -48,6 +49,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Try to load config from localStorage if they exist
     loadConfigFromLocalStorage();
+
+    // Ensure maxVisibleDepartures is never more than 7 to prevent display issues
+    config.maxVisibleDepartures = Math.min(config.maxVisibleDepartures, 7);
+    document.documentElement.style.setProperty('--visible-departures', config.maxVisibleDepartures);
 
     // Store loaded timetable data for different days
     let timetableData = {
@@ -95,9 +100,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
                 
                 if (savedSettings.maxVisibleDepartures !== undefined && !urlHasParam('maxdep')) {
-                    config.maxVisibleDepartures = savedSettings.maxVisibleDepartures;
+                    // Ensure maxVisibleDepartures is never more than 7
+                    config.maxVisibleDepartures = Math.min(savedSettings.maxVisibleDepartures, 7);
                     // Update CSS variable
-                    document.documentElement.style.setProperty('--visible-departures', savedSettings.maxVisibleDepartures);
+                    document.documentElement.style.setProperty('--visible-departures', config.maxVisibleDepartures);
                 }
                 
                 if (savedSettings.highlightStop !== undefined && !urlHasParam('highlight')) {
@@ -200,11 +206,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Check for maxVisibleDepartures
         if (urlParams.has('maxdep')) {
-            const maxDep = parseInt(urlParams.get('maxdep'), 10);
-            if (!isNaN(maxDep) && maxDep > 0 && maxDep <= 20) {
-                config.maxVisibleDepartures = maxDep;
+            let maxDep = parseInt(urlParams.get('maxdep'), 10);
+            if (!isNaN(maxDep) && maxDep > 0) {
+                // Cap at 7 to prevent display issues
+                config.maxVisibleDepartures = Math.min(maxDep, 7);
                 // Update CSS variable
-                document.documentElement.style.setProperty('--visible-departures', maxDep);
+                document.documentElement.style.setProperty('--visible-departures', config.maxVisibleDepartures);
             }
         } else {
             // Set default based on screen size if not specified in URL
@@ -223,9 +230,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 config.maxVisibleDepartures = 4;
                 document.documentElement.style.setProperty('--visible-departures', 4);
             } else {
-                // Desktop default stays at 9
-                config.maxVisibleDepartures = 9;
-                document.documentElement.style.setProperty('--visible-departures', 9);
+                // Desktop default capped at 7
+                config.maxVisibleDepartures = 7;
+                document.documentElement.style.setProperty('--visible-departures', 7);
             }
         }
     }
@@ -562,14 +569,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         directionsSection.style.display = config.showEmelietrafiken ? 'block' : 'none';
         panelContent.appendChild(directionsSection);
         
-        // Add Visning section
+        // Add Visning section with max 7 departures
         panelContent.appendChild(createSettingsSection('Visning', [
             {
                 type: 'select',
                 id: 'maxdep-select',
                 label: 'Antal avgångar:',
                 value: config.maxVisibleDepartures,
-                options: Array.from({length: 13}, (_, i) => i + 3).map(num => ({
+                options: Array.from({length: 5}, (_, i) => i + 3).map(num => ({
                     value: num,
                     text: num.toString()
                 })),
