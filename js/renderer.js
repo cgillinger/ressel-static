@@ -6,12 +6,13 @@
  * of timetables and related UI elements.
  * 
  * Version History:
+ * 4.0.0 (2025-03-21) - Updated for new JSON structure with separate day types
  * 2.4.0 (2025-03-22) - Added speech synthesis feature for accessibility
  * 2.0.0 (2025-01-16) - Converted to static web module, improved accessibility
  * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 2.4.0
+ * @version 4.0.0
  * @license MIT
  */
 
@@ -253,8 +254,8 @@ class Renderer {
     /**
      * Creates a row for departure times
      * @param {string} stop Stop name
-     * @param {Array} times Array of departure times
-     * @param {string} currentTime Current time
+     * @param {Array} times Array of departure times with format {time: "HH:MM", isToday: boolean}
+     * @param {string} currentTime Current time in HH:MM format
      * @param {string} highlightStop Stop to highlight
      * @returns {HTMLElement} Row element
      */

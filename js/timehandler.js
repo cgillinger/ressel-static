@@ -1,37 +1,28 @@
 /**
  * Resseltrafiken Web Application - Time Handling Module
  * 
- * Manages all time-related calculations, schedule processing, and holiday detection
- * for the Resseltrafiken timetable application. This module handles Swedish holidays,
- * schedule types, and time conversions.
+ * Manages time-related calculations and schedule processing for the Resseltrafiken
+ * timetable application. This module handles time conversions and departure sorting.
  * 
  * Version History:
+ * 4.0.0 (2025-03-21) - Simplified for new JSON structure, removed schedule type detection
+ * 3.0.0 (2025-03-20) - Added support for separate day types
  * 2.4.0 (2025-03-22) - Updated version numbering for consistency with other components
  * 2.1.0 (2025-03-18) - Updated to handle seasonal timetables and special holiday rules
  * 2.0.0 (2025-01-16) - Converted to static web module, improved holiday handling
  * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 2.4.0
+ * @version 4.0.0
  * @license MIT
  */
 
 class TimeHandler {
     /**
-     * Initializes the TimeHandler with Swedish holiday definitions
-     * Fixed holidays are dates that occur on the same date every year
+     * Initializes the TimeHandler
      */
     constructor() {
-        this.fixedHolidays = {
-            "01-01": "Nyårsdagen",
-            "01-06": "Trettondedag jul",
-            "05-01": "Första maj",
-            "06-06": "Nationaldagen",
-            "12-24": "Julafton",
-            "12-25": "Juldagen",
-            "12-26": "Annandag jul",
-            "12-31": "Nyårsafton"
-        };
+        // No initialization needed in this version
     }
 
     /**
@@ -57,366 +48,9 @@ class TimeHandler {
     }
 
     /**
-     * Calculates Easter Sunday for a given year using the Meeus/Jones/Butcher algorithm
-     * This algorithm is valid for years between 1583 and 4099
-     * @param {number} year The year to calculate Easter for
-     * @returns {Date} Easter Sunday date
-     */
-    calculateEaster(year) {
-        const a = year % 19;
-        const b = Math.floor(year / 100);
-        const c = year % 100;
-        const d = Math.floor(b / 4);
-        const e = b % 4;
-        const f = Math.floor((b + 8) / 25);
-        const g = Math.floor((b - f + 1) / 3);
-        const h = (19 * a + b - d - g + 15) % 30;
-        const i = Math.floor(c / 4);
-        const k = c % 4;
-        const l = (32 + 2 * e + 2 * i - h - k) % 7;
-        const m = Math.floor((a + 11 * h + 22 * l) / 451);
-        const month = Math.floor((h + l - 7 * m + 114) / 31);
-        const day = ((h + l - 7 * m + 114) % 31) + 1;
-        
-        return new Date(year, month - 1, day);
-    }
-
-    /**
-     * Calculates Ascension Day (Kristi himmelsfärdsdag)
-     * 40 days after Easter Sunday (which includes Easter Sunday itself)
-     * @param {number} year The year to calculate for
-     * @returns {Date} Ascension Day date
-     */
-    calculateAscensionDay(year) {
-        const easter = this.calculateEaster(year);
-        return this.addDays(easter, 39); // 40 days including Easter Sunday itself
-    }
-
-    /**
-     * Calculates Midsummer Eve (Friday between June 19-25)
-     * In Sweden, Midsummer Eve is always celebrated on a Friday
-     * @param {number} year The year to calculate Midsummer for
-     * @returns {Date} Midsummer Eve date
-     */
-    calculateMidsummer(year) {
-        const june19 = new Date(year, 5, 19);
-        const dayOfWeek = june19.getDay();
-        const daysToAdd = (5 - dayOfWeek + 7) % 7; // Calculate days until Friday
-        return new Date(year, 5, 19 + daysToAdd);
-    }
-
-    /**
-     * Formats date to MM-DD string for holiday checking
-     * @param {Date} date Date to format
-     * @returns {string} Date in MM-DD format
-     */
-    formatDate(date) {
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${month}-${day}`;
-    }
-
-    /**
-     * Formats date to YYYY-MM-DD string for exact date matching
-     * @param {Date} date Date to format
-     * @returns {string} Date in YYYY-MM-DD format
-     */
-    formatFullDate(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    }
-
-    /**
-     * Adds specified number of days to a date
-     * @param {Date} date Starting date
-     * @param {number} days Number of days to add (can be negative)
-     * @returns {Date} Resulting date
-     */
-    addDays(date, days) {
-        const result = new Date(date);
-        result.setDate(result.getDate() + days);
-        return result;
-    }
-
-    /**
-     * Gets all variable holidays for a specific year
-     * Variable holidays are those that occur on different dates each year
-     * @param {number} year The year to get holidays for
-     * @returns {Object} Object mapping dates to holiday names
-     */
-    getVariableHolidays(year) {
-        const easter = this.calculateEaster(year);
-        const midsummer = this.calculateMidsummer(year);
-        const ascensionDay = this.calculateAscensionDay(year);
-        
-        return {
-            [this.formatDate(easter)]: "Påskdagen",
-            [this.formatDate(this.addDays(easter, -2))]: "Långfredagen",
-            [this.formatDate(this.addDays(easter, 1))]: "Annandag påsk",
-            [this.formatDate(ascensionDay)]: "Kristi himmelsfärdsdag",
-            [this.formatDate(this.addDays(easter, 49))]: "Pingstdagen",
-            [this.formatDate(midsummer)]: "Midsommarafton",
-            [this.formatDate(this.addDays(midsummer, 1))]: "Midsommardagen"
-        };
-    }
-
-    /**
-     * Checks if a specific date is a holiday
-     * Combines both fixed and variable holidays as well as configuration-specific holidays
-     * @param {Date} date Date to check
-     * @param {Object} timetable Current timetable data
-     * @returns {boolean} True if date is a holiday
-     */
-    isHoliday(date, timetable) {
-        const formatted = this.formatDate(date);
-        const fullFormatted = this.formatFullDate(date);
-        const year = date.getFullYear();
-        
-        // Check fixed holidays first
-        if (this.fixedHolidays[formatted]) {
-            return true;
-        }
-
-        // Check variable holidays
-        const variableHolidays = this.getVariableHolidays(year);
-        if (variableHolidays[formatted]) {
-            return true;
-        }
-
-        // Check specific holiday dates from city line data if available
-        if (timetable && timetable.city && timetable.city.metadata && timetable.city.metadata.holiday_rules) {
-            const rules = timetable.city.metadata.holiday_rules;
-            
-            // Check dates with no traffic (these are typically major holidays)
-            if (rules.no_traffic && rules.no_traffic.includes(fullFormatted)) {
-                return true;
-            }
-            
-            // Check dates that follow weekend schedule
-            if (rules.weekend_schedule && rules.weekend_schedule.includes(fullFormatted)) {
-                return true;
-            }
-        }
-
-        // Special handling for 2025 spring timetable
-        if (fullFormatted === "2025-05-01" || // Första maj
-            fullFormatted === "2025-05-29" || // Kristi himmelsfärd (2025)
-            fullFormatted === "2025-06-06") { // Nationaldagen
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Checks if current time is after last departure of the day
-     * @param {Object} timetable Current timetable data
-     * @returns {boolean} True if after last departure
-     */
-    isAfterLastDeparture(timetable) {
-        const now = new Date();
-        const currentTime = now.getHours() * 60 + now.getMinutes();
-        const scheduleType = this.getBasicScheduleType();
-        
-        if (!timetable || !timetable.sjo || !timetable.city) {
-            return false;
-        }
-
-        let latestDeparture = "00:00";
-
-        try {
-            // Try to find the latest departure time across all routes
-            // First check Sjöstadstrafiken departures
-            if (timetable.sjo.schedules && timetable.sjo.schedules[scheduleType] && timetable.sjo.schedules[scheduleType].departures) {
-                const sjoSchedule = timetable.sjo.schedules[scheduleType].departures;
-                Object.values(sjoSchedule).forEach(times => {
-                    const lastTime = times[times.length - 1];
-                    if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
-                        latestDeparture = lastTime;
-                    }
-                });
-            }
-
-            // Check Emelietrafiken departures - handle different schedule formats
-            const citySchedule = timetable.city.schedules[scheduleType];
-            if (scheduleType === 'weekday') {
-                // Check all schedule segments for weekday
-                if (citySchedule.to_city) {
-                    // Check morning schedule
-                    if (citySchedule.to_city.morning && citySchedule.to_city.morning.departures) {
-                        Object.values(citySchedule.to_city.morning.departures).forEach(times => {
-                            const lastTime = times[times.length - 1];
-                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
-                                latestDeparture = lastTime;
-                            }
-                        });
-                    }
-                    
-                    // Check lunch schedule if it exists (Spring 2025)
-                    if (citySchedule.to_city.lunch && citySchedule.to_city.lunch.departures) {
-                        Object.values(citySchedule.to_city.lunch.departures).forEach(times => {
-                            const lastTime = times[times.length - 1];
-                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
-                                latestDeparture = lastTime;
-                            }
-                        });
-                    }
-                    
-                    // Check afternoon schedule
-                    if (citySchedule.to_city.afternoon && citySchedule.to_city.afternoon.departures) {
-                        Object.values(citySchedule.to_city.afternoon.departures).forEach(times => {
-                            const lastTime = times[times.length - 1];
-                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
-                                latestDeparture = lastTime;
-                            }
-                        });
-                    }
-                }
-                
-                if (citySchedule.from_city) {
-                    // Check morning schedule
-                    if (citySchedule.from_city.morning && citySchedule.from_city.morning.departures) {
-                        Object.values(citySchedule.from_city.morning.departures).forEach(times => {
-                            const lastTime = times[times.length - 1];
-                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
-                                latestDeparture = lastTime;
-                            }
-                        });
-                    }
-                    
-                    // Check lunch schedule if it exists (Spring 2025)
-                    if (citySchedule.from_city.lunch && citySchedule.from_city.lunch.departures) {
-                        Object.values(citySchedule.from_city.lunch.departures).forEach(times => {
-                            const lastTime = times[times.length - 1];
-                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
-                                latestDeparture = lastTime;
-                            }
-                        });
-                    }
-                    
-                    // Check afternoon schedule
-                    if (citySchedule.from_city.afternoon && citySchedule.from_city.afternoon.departures) {
-                        Object.values(citySchedule.from_city.afternoon.departures).forEach(times => {
-                            const lastTime = times[times.length - 1];
-                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
-                                latestDeparture = lastTime;
-                            }
-                        });
-                    }
-                }
-            } else {
-                // Handle weekend schedule - checking for the Spring 2025 format first
-                if (citySchedule.saturday && citySchedule.sunday) {
-                    // Spring 2025 format with separate weekend schedules
-                    const today = new Date();
-                    const isSaturday = today.getDay() === 6;
-                    const weekendSchedule = isSaturday ? citySchedule.saturday : citySchedule.sunday;
-                    
-                    if (weekendSchedule.to_city && weekendSchedule.to_city.departures) {
-                        Object.values(weekendSchedule.to_city.departures).forEach(times => {
-                            const lastTime = times[times.length - 1];
-                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
-                                latestDeparture = lastTime;
-                            }
-                        });
-                    }
-                    
-                    if (weekendSchedule.from_city && weekendSchedule.from_city.departures) {
-                        Object.values(weekendSchedule.from_city.departures).forEach(times => {
-                            const lastTime = times[times.length - 1];
-                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
-                                latestDeparture = lastTime;
-                            }
-                        });
-                    }
-                } else {
-                    // Standard format
-                    if (citySchedule.to_city && citySchedule.to_city.departures) {
-                        Object.values(citySchedule.to_city.departures).forEach(times => {
-                            const lastTime = times[times.length - 1];
-                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
-                                latestDeparture = lastTime;
-                            }
-                        });
-                    }
-                    
-                    if (citySchedule.from_city && citySchedule.from_city.departures) {
-                        Object.values(citySchedule.from_city.departures).forEach(times => {
-                            const lastTime = times[times.length - 1];
-                            if (this.timeToMinutes(lastTime) > this.timeToMinutes(latestDeparture)) {
-                                latestDeparture = lastTime;
-                            }
-                        });
-                    }
-                }
-            }
-
-        } catch (error) {
-            console.error('Error checking last departure:', error);
-            return false;
-        }
-
-        return currentTime > this.timeToMinutes(latestDeparture);
-    }
-
-    /**
-     * Gets basic schedule type based on current day
-     * @returns {string} "weekend" or "weekday"
-     */
-    getBasicScheduleType() {
-        const now = new Date();
-        return now.getDay() === 6 || now.getDay() === 0 ? "weekend" : "weekday";
-    }
-
-    /**
-     * Determines schedule type based on current time and holidays
-     * Takes into account holidays and next day scheduling
-     * @param {Object} timetable Current timetable data
-     * @returns {string} "weekend" or "weekday"
-     */
-    getScheduleType(timetable) {
-        const now = new Date();
-        
-        // Check if current time is a holiday
-        if (this.isHoliday(now, timetable)) {
-            return "weekend";
-        }
-
-        // If after last departure, check next day's schedule
-        if (this.isAfterLastDeparture(timetable)) {
-            const tomorrow = new Date(now);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            
-            if (this.isHoliday(tomorrow, timetable)) {
-                return "weekend";
-            }
-            
-            const tomorrowDay = tomorrow.getDay();
-            if (tomorrowDay === 0 || tomorrowDay === 6) {
-                return "weekend";
-            }
-            
-            return "weekday";
-        }
-
-        return this.getBasicScheduleType();
-    }
-
-    /**
-     * Gets display name for schedule type
-     * @param {string} scheduleType The schedule type
-     * @returns {string} Display name in Swedish
-     */
-    getScheduleDisplayName(scheduleType) {
-        return scheduleType === "weekday" ? "Vardagar" : "Helgtrafik";
-    }
-
-    /**
      * Processes and sorts schedule times for display
-     * Handles tomorrow times and sorts by next departure
-     * @param {string[]} times Array of time strings
+     * The function expects an array of objects with time and isToday properties
+     * @param {Array<Object>} times Array of time objects with format: {time: "HH:MM", isToday: boolean}
      * @param {number} maxDepartures Maximum number of departures to return
      * @returns {Array<Object>} Processed and sorted departure times
      */
@@ -428,42 +62,28 @@ class TimeHandler {
 
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        const isBeforeMidnight = currentMinutes < 24 * 60;
         
         // Process times and create extended information
-        let processedTimes = times.map(time => {
-            const minutesSinceMidnight = this.timeToMinutes(time);
-            let diff = minutesSinceMidnight - currentMinutes;
+        let processedTimes = times.map(timeObj => {
+            const minutesSinceMidnight = this.timeToMinutes(timeObj.time);
             
-            // Handle times that might be for tomorrow
-            if (isBeforeMidnight && diff < 0) {
-                const tomorrowDiff = (24 * 60 + minutesSinceMidnight) - currentMinutes;
-                return [
-                    {
-                        time: time,
-                        minutes: minutesSinceMidnight,
-                        diff: diff,
-                        isPast: true,
-                        isToday: true
-                    },
-                    {
-                        time: time,
-                        minutes: minutesSinceMidnight + 24 * 60,
-                        diff: tomorrowDiff,
-                        isPast: false,
-                        isToday: false
-                    }
-                ];
+            // Calculate difference based on whether it's today or tomorrow
+            let diff;
+            if (timeObj.isToday) {
+                diff = minutesSinceMidnight - currentMinutes;
+            } else {
+                // For tomorrow's times, add 24 hours worth of minutes
+                diff = (24 * 60 + minutesSinceMidnight) - currentMinutes;
             }
             
-            return [{
-                time: time,
-                minutes: minutesSinceMidnight,
+            return {
+                time: timeObj.time,
+                minutes: timeObj.isToday ? minutesSinceMidnight : minutesSinceMidnight + 24 * 60,
                 diff: diff,
                 isPast: diff < 0,
-                isToday: true
-            }];
-        }).flat();
+                isToday: timeObj.isToday
+            };
+        });
 
         // Sort by time difference
         processedTimes.sort((a, b) => a.diff - b.diff);

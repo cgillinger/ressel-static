@@ -1,0 +1,108 @@
+{
+  "_metadata": {
+    "version": "4.0.0",
+    "last_updated": "2025-03-21",
+    "data_sources": [
+      "CITY LINE VINTER 2024/2025 (PDF)",
+      "CITY LINE VÅREN 2025 (PDF)"
+    ],
+    "update_cycle": "Timetables are updated seasonally",
+    "validation_rules": [
+      "All times must be in HH:MM format",
+      "All dates must be in YYYY-MM-DD format",
+      "Periods are specified as YYYY-MM-DD/YYYY-MM-DD"
+    ]
+  },
+  "metadata": {
+    "type": "paid",
+    "pricing": {
+      "single": {
+        "adult": 75,
+        "senior_youth": 60
+      },
+      "day": {
+        "adult": 125,
+        "senior_youth": 90
+      },
+      "multi_trip": {
+        "trips": 10,
+        "adult": 560,
+        "senior_youth": 380
+      },
+      "monthly": {
+        "adult": 960,
+        "senior_youth": 640
+      }
+    },
+    "notes": {
+      "payment": "Endast betalning med kort - Visa & Master Card",
+      "children": "Barn under 13 år reser gratis i målsmans sällskap",
+      "bicycles": "Cyklar medföres avgiftsfritt på egen risk",
+      "youth_age": "13-18 år"
+    }
+  },
+  "service_configuration": {
+    "stop_sequence": {
+      "to_city": [
+        "Barnängsbryggan",
+        "Lumabryggan",
+        "Henriksdalsbryggan",
+        "Masthamnen",
+        "Djurgården",
+        "Nybroplan"
+      ],
+      "from_city": [
+        "Nybroplan",
+        "Djurgården",
+        "Masthamnen",
+        "Barnängsbryggan",
+        "Lumabryggan",
+        "Henriksdalsbryggan"
+      ]
+    },
+    "disembark_only_rules": {
+      "morning_after": "12:14",
+      "afternoon_after": "18:44",
+      "affected_stops": [
+        "Barnängsbryggan",
+        "Lumabryggan",
+        "Henriksdalsbryggan"
+      ]
+    }
+  },
+  "season_mapping": [
+    {
+      "name": "Winter 2024-2025",
+      "period": {
+        "start": "2024-11-04",
+        "end": "2025-04-21",
+        "source": "City Line PDF header"
+      },
+      "files": {
+        "weekday": "ressel-city-winter-2024-2025-weekday.json",
+        "saturday": "ressel-city-winter-2024-2025-saturday.json",
+        "sunday": "ressel-city-winter-2024-2025-sunday.json"
+      },
+      "holiday_rules": {
+        "no_traffic": ["2024-12-24", "2024-12-25", "2024-12-26", "2024-12-31", "2025-01-01"],
+        "weekend_schedule": ["2025-01-06", "2025-04-18", "2025-04-19", "2025-04-20", "2025-04-21"]
+      }
+    },
+    {
+      "name": "Spring 2025",
+      "period": {
+        "start": "2025-04-22",
+        "end": "2025-06-19",
+        "source": "City Line Spring PDF header 'VÅREN 2025 22 APRIL - 19 JUNI'"
+      },
+      "files": {
+        "weekday": "ressel-city-spring-2025-weekday.json",
+        "saturday": "ressel-city-spring-2025-saturday.json",
+        "sunday": "ressel-city-spring-2025-sunday.json"
+      },
+      "holiday_rules": {
+        "weekend_schedule": ["2025-05-01", "2025-05-29", "2025-06-06"]
+      }
+    }
+  ]
+}
