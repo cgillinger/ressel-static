@@ -603,9 +603,9 @@ footer {
     }
 }
 
-/* Focus Styles */
+/* Focus Styles - applied for all focus interactions */
 .MMM-Resseltrafiken .times span:focus {
-    outline: 2px solid var(--color-highlight-yellow);
+    outline: 2px solid var(--color-error);
     outline-offset: 2px;
 }
 
