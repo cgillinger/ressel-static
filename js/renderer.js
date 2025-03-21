@@ -6,11 +6,12 @@
  * of timetables and related UI elements.
  * 
  * Version History:
+ * 2.4.0 (2025-03-22) - Added speech synthesis feature for accessibility
  * 2.0.0 (2025-01-16) - Converted to static web module, improved accessibility
  * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 2.0.0
+ * @version 2.4.0
  * @license MIT
  */
 
@@ -27,6 +28,8 @@ class Renderer {
         this.createWrapper = this.createWrapper.bind(this);
         this.createTimetable = this.createTimetable.bind(this);
         this.setupOverflowObservers = this.setupOverflowObservers.bind(this);
+        this.createSpeechButton = this.createSpeechButton.bind(this);
+        this.speakNextDeparture = this.speakNextDeparture.bind(this);
     }
 
     /**
@@ -68,9 +71,10 @@ class Renderer {
      * Creates a timetable container with header
      * @param {string} title Timetable title
      * @param {string} scheduleType Schedule type (weekday/weekend)
+     * @param {string} highlightStop Stop that is highlighted
      * @returns {HTMLElement} Timetable container
      */
-    createTimetableContainer(title, scheduleType) {
+    createTimetableContainer(title, scheduleType, highlightStop) {
         const container = document.createElement("div");
         container.className = "timetable";
         container.setAttribute('role', 'region');
@@ -100,6 +104,13 @@ class Renderer {
         titleElement.appendChild(icon);
         
         titleSection.appendChild(titleElement);
+        
+        // Add speech button if enabled
+        if (this.config.showSpeechSynthesis) {
+            const speechButton = this.createSpeechButton(title, highlightStop);
+            titleSection.appendChild(speechButton);
+        }
+        
         container.appendChild(titleSection);
 
         // Add departures header
@@ -111,6 +122,132 @@ class Renderer {
         container.appendChild(departuresHeader);
 
         return container;
+    }
+    
+    /**
+     * Creates a speech synthesis button for the timetable
+     * @param {string} title Timetable title
+     * @param {string} highlightStop Stop that is highlighted
+     * @returns {HTMLElement} Speech button
+     */
+    createSpeechButton(title, highlightStop) {
+        const speechButton = document.createElement("button");
+        speechButton.className = "speech-button";
+        speechButton.innerHTML = '🔊';
+        speechButton.setAttribute('aria-label', `Läs upp nästa avgång från ${highlightStop}`);
+        speechButton.setAttribute('title', `Läs upp nästa avgång från ${highlightStop}`);
+        speechButton.setAttribute('data-stop', highlightStop);
+        speechButton.setAttribute('data-title', title);
+        
+        // Använd en data-attribut för att spåra aktiv status
+        speechButton.setAttribute('data-speaking', 'false');
+        
+        speechButton.addEventListener('click', () => {
+            this.speakNextDeparture(speechButton);
+        });
+        
+        return speechButton;
+    }
+    
+    /**
+     * Speaks the next departure using the Web Speech API
+     * @param {HTMLElement} button The speech button that was clicked
+     */
+    speakNextDeparture(button) {
+        // Om talsyntes redan pågår, avbryt den
+        if (window.speechSynthesis.speaking && button.getAttribute('data-speaking') === 'true') {
+            window.speechSynthesis.cancel();
+            button.setAttribute('data-speaking', 'false');
+            button.classList.remove('speaking');
+            return;
+        }
+        
+        const stop = button.getAttribute('data-stop');
+        const title = button.getAttribute('data-title');
+        
+        // Hitta tidtabellen som innehåller den markerade hållplatsen
+        const timetable = button.closest('.timetable');
+        if (!timetable) return;
+        
+        // Hitta raden för den markerade hållplatsen
+        const highlightedRow = timetable.querySelector('.highlight-stop');
+        if (!highlightedRow) {
+            this.speakMessage(`Ingen markerad hållplats hittades för ${title}.`);
+            return;
+        }
+        
+        // Hitta nästa avgång (element med klass highlight-green eller highlight-yellow)
+        const nextDeparture = highlightedRow.querySelector('.highlight-green, .highlight-yellow');
+        if (!nextDeparture) {
+            this.speakMessage(`Inga fler avgångar idag från ${stop}.`, button);
+            return;
+        }
+        
+        // Kontrollera om avgången är för idag eller imorgon
+        const isTomorrow = nextDeparture.classList.contains('tomorrow-time');
+        const time = nextDeparture.textContent.trim();
+        
+        // Förbered meddelandet
+        let message;
+        
+        if (isTomorrow) {
+            message = `Nästa avgång från ${stop} är imorgon klockan ${time}.`;
+        } else {
+            // Kontrollera om det är en snar avgång (gul markering)
+            if (nextDeparture.classList.contains('highlight-yellow')) {
+                message = `Snar avgång från ${stop} klockan ${time}.`;
+            } else {
+                message = `Nästa avgång från ${stop} är klockan ${time}.`;
+            }
+        }
+        
+        // Läs upp meddelandet
+        this.speakMessage(message, button);
+    }
+    
+    /**
+     * Uses the Web Speech API to speak a message
+     * @param {string} message Message to speak
+     * @param {HTMLElement} button The button that triggered the speech (for visual feedback)
+     */
+    speakMessage(message, button = null) {
+        // Kontrollera om talsyntes stöds av webbläsaren
+        if (!('speechSynthesis' in window)) {
+            console.error('Din webbläsare stödjer inte talsyntes.');
+            return;
+        }
+        
+        // Avbryt eventuell pågående uppläsning
+        window.speechSynthesis.cancel();
+        
+        // Skapa ett nytt Speech Synthesis Utterance-objekt
+        const utterance = new SpeechSynthesisUtterance(message);
+        
+        // Försök använda svenska som språk
+        utterance.lang = 'sv-SE';
+        utterance.rate = 0.9; // Lite långsammare för tydlighet
+        utterance.pitch = 1;
+        
+        // Visuell feedback när uppläsningen börjar
+        if (button) {
+            button.classList.add('speaking');
+            button.setAttribute('data-speaking', 'true');
+            button.setAttribute('aria-label', 'Avbryt uppläsning');
+            
+            // Återställ knappens utseende när uppläsningen är klar
+            utterance.onend = () => {
+                button.classList.remove('speaking');
+                button.setAttribute('data-speaking', 'false');
+                button.setAttribute('aria-label', `Läs upp nästa avgång från ${button.getAttribute('data-stop')}`);
+            };
+            
+            // Hantera avbruten uppläsning
+            utterance.onpause = utterance.onend;
+            utterance.onerror = utterance.onend;
+        }
+        
+        // Starta uppläsningen
+        window.speechSynthesis.speak(utterance);
     }
 
     /**
@@ -215,13 +352,13 @@ class Renderer {
      * @returns {HTMLElement} Complete timetable element
      */
     createTimetable(schedule, title, scheduleDisplayName, customHighlightStop = null) {
-        const container = this.createTimetableContainer(title, scheduleDisplayName);
+        const highlightStopToUse = customHighlightStop || this.config.highlightStop;
+        
+        const container = this.createTimetableContainer(title, scheduleDisplayName, highlightStopToUse);
 
         const now = new Date();
         const currentTime = now.getHours().toString().padStart(2, '0') + ":" + 
                           now.getMinutes().toString().padStart(2, '0');
-
-        const highlightStopToUse = customHighlightStop || this.config.highlightStop;
 
         try {
             // Create rows for each stop

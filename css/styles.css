@@ -5,6 +5,7 @@
  * Includes dark theme, responsive design, and accessibility features.
  * 
  * Version History:
+ * 2.4.0 (2025-03-22) - Added styling for speech synthesis feature
  * 2.3.0 (2025-03-21) - Added settings panel, hamburger menu and improved mobile support
  * 2.2.1 (2025-03-20) - Fixed highlight borders alignment issues
  * 2.2.0 (2025-03-19) - Fixed highlighting borders issue, added toggle controls
@@ -12,7 +13,7 @@
  * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 2.3.0
+ * @version 2.4.0
  * @license MIT
  */
 
@@ -28,6 +29,9 @@
     --color-error: #ff0000;
     --color-panel-background: #121212;
     --color-panel-border: #333333;
+    --color-speech-button: rgba(0, 255, 0, 0.15);
+    --color-speech-button-hover: rgba(0, 255, 0, 0.25);
+    --color-speech-button-active: rgba(0, 255, 0, 0.45);
     
     /* Typography */
     --font-primary: "Roboto Condensed", system-ui, sans-serif;
@@ -77,6 +81,49 @@ body {
     max-width: var(--container-max-width);
     margin: 0 auto;
     padding: 20px;
+}
+
+/* Speech Synthesis Button */
+.speech-button {
+    background-color: var(--color-speech-button);
+    color: var(--color-text-bright);
+    border: none;
+    border-radius: var(--border-radius);
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color var(--transition-speed) ease;
+    margin-left: 10px;
+}
+
+.speech-button:hover {
+    background-color: var(--color-speech-button-hover);
+}
+
+.speech-button:focus {
+    outline: 2px solid var(--color-highlight-green);
+    outline-offset: 2px;
+}
+
+.speech-button.speaking {
+    background-color: var(--color-speech-button-active);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        opacity: 1;
+    }
 }
 
 /* Settings Button (Hamburger icon) */
@@ -353,6 +400,9 @@ body {
     margin-bottom: 15px;
     position: relative;
     text-align: right;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 /* Title Styling */
@@ -567,6 +617,12 @@ footer {
     .MMM-Resseltrafiken .title img {
         height: 40px;
     }
+    
+    .speech-button {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+    }
 
     #app {
         padding: 10px;
@@ -588,6 +644,12 @@ footer {
 
     .MMM-Resseltrafiken .title img {
         height: 30px;
+    }
+    
+    .speech-button {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
     }
     
     .settings-panel {
@@ -618,7 +680,8 @@ footer {
 
     .settings-button,
     .settings-panel,
-    .settings-overlay {
+    .settings-overlay,
+    .speech-button {
         display: none;
     }
 }

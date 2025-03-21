@@ -6,6 +6,7 @@
  * and handles the overall application lifecycle.
  * 
  * Version History:
+ * 2.4.0 (2025-03-22) - Added speech synthesis functionality for accessibility
  * 2.3.1 (2025-03-21) - Fixed visibility of direction settings, replaced toggles with settings panel
  * 2.2.1 (2025-03-20) - Fixed toggle controls visibility logic
  * 2.2.0 (2025-03-19) - Added options to show/hide individual timetables
@@ -14,7 +15,7 @@
  * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 2.3.1
+ * @version 2.4.0
  * @license MIT
  */
 
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         showBothDirections: true,        // Show both outbound and return trips
         showSjostadstrafiken: true,      // Show Sjöstadstrafiken timetable
         showEmelietrafiken: true,        // Show Emelietrafiken (M/S Emelie) timetable
+        showSpeechSynthesis: true,       // Show speech synthesis buttons for accessibility
         highlightStop: "Lumabryggan",    // Stop to highlight in the UI
         cityHighlightStop: "Lumabryggan", // Stop to highlight for city line (to city)
         cityReturnStop: "Nybroplan",     // Return stop to highlight for city direction
@@ -96,6 +98,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (savedSettings.cityReturnStop !== undefined && !urlHasParam('returnstop')) {
                     config.cityReturnStop = savedSettings.cityReturnStop;
                 }
+                
+                if (savedSettings.showSpeechSynthesis !== undefined && !urlHasParam('speech')) {
+                    config.showSpeechSynthesis = savedSettings.showSpeechSynthesis;
+                }
             }
         } catch (error) {
             console.warn('Could not load settings from localStorage:', error);
@@ -125,7 +131,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                     maxVisibleDepartures: config.maxVisibleDepartures,
                     highlightStop: config.highlightStop,
                     cityHighlightStop: config.cityHighlightStop,
-                    cityReturnStop: config.cityReturnStop
+                    cityReturnStop: config.cityReturnStop,
+                    showSpeechSynthesis: config.showSpeechSynthesis
                 };
                 
                 localStorage.setItem('sjostadsfarjetrafiken_settings', JSON.stringify(settings));
@@ -170,6 +177,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (urlParams.has('bothdir')) {
             config.showBothDirections = urlParams.get('bothdir') === '1' || 
                                         urlParams.get('bothdir') === 'true';
+        }
+        
+        // Check for speech synthesis setting
+        if (urlParams.has('speech')) {
+            config.showSpeechSynthesis = urlParams.get('speech') === '1' || 
+                                        urlParams.get('speech') === 'true';
         }
         
         // Check for maxVisibleDepartures
@@ -514,6 +527,22 @@ document.addEventListener('DOMContentLoaded', async function() {
                     document.documentElement.style.setProperty('--visible-departures', numValue);
                     updateDisplay(timetableData);
                     updateURLParameter('maxdep', numValue.toString());
+                    saveConfigToLocalStorage();
+                }
+            }
+        ]));
+        
+        // Add Tillgänglighet section
+        panelContent.appendChild(createSettingsSection('Tillgänglighet', [
+            {
+                type: 'toggle',
+                id: 'speech-toggle',
+                label: 'Talsyntes för nästa avgång',
+                checked: config.showSpeechSynthesis,
+                onChange: (checked) => {
+                    config.showSpeechSynthesis = checked;
+                    updateDisplay(timetableData);
+                    updateURLParameter('speech', checked ? '1' : '0');
                     saveConfigToLocalStorage();
                 }
             }

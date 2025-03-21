@@ -6,12 +6,13 @@
  * schedule types, and time conversions.
  * 
  * Version History:
+ * 2.4.0 (2025-03-22) - Updated version numbering for consistency with other components
  * 2.1.0 (2025-03-18) - Updated to handle seasonal timetables and special holiday rules
  * 2.0.0 (2025-01-16) - Converted to static web module, improved holiday handling
  * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 2.1.0
+ * @version 2.4.0
  * @license MIT
  */
 

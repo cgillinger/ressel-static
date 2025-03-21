@@ -1,9 +1,13 @@
 /**
  * Resseltrafiken Service Worker
  * Caches application assets for offline functionality
+ * 
+ * Version History:
+ * 2.4.0 (2025-03-22) - Uppdaterad version med stöd för talsyntes
+ * 2.0.0 (2025-01-16) - Original service worker
  */
 
-const CACHE_NAME = 'resseltrafiken-v2.0.0';
+const CACHE_NAME = 'resseltrafiken-v2.4.0';
 
 // Files to cache
 const FILES_TO_CACHE = [
@@ -15,6 +19,7 @@ const FILES_TO_CACHE = [
   './js/renderer.js',
   './data/ressel-sjo.json',
   './data/ressel-city.json',
+  './data/ressel-city-spring-2025.json',
   './icons/boat.png',
   './manifest.json'
 ];
