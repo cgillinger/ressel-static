@@ -5,6 +5,7 @@
  * Includes dark theme, responsive design, and accessibility features.
  * 
  * Version History:
+ * 2.5.0 (2025-03-25) - Added styling for reset button in settings panel
  * 2.4.0 (2025-03-22) - Added styling for speech synthesis feature
  * 2.3.0 (2025-03-21) - Added settings panel, hamburger menu and improved mobile support
  * 2.2.1 (2025-03-20) - Fixed highlight borders alignment issues
@@ -13,7 +14,7 @@
  * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 2.4.0
+ * @version 2.5.0
  * @license MIT
  */
 
@@ -32,6 +33,8 @@
     --color-speech-button: rgba(0, 255, 0, 0.15);
     --color-speech-button-hover: rgba(0, 255, 0, 0.25);
     --color-speech-button-active: rgba(0, 255, 0, 0.45);
+    --color-reset-button: rgba(255, 0, 0, 0.15);
+    --color-reset-button-hover: rgba(255, 0, 0, 0.25);
     
     /* Typography */
     --font-primary: "Roboto Condensed", system-ui, sans-serif;
@@ -241,7 +244,9 @@ body {
 .settings-footer {
     padding: 15px 20px;
     border-top: 1px solid var(--color-panel-border);
-    text-align: right;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .settings-button-close {
@@ -258,6 +263,28 @@ body {
 
 .settings-button-close:hover {
     background-color: rgba(0, 255, 0, 0.25);
+}
+
+/* Reset button styling */
+.settings-button-reset {
+    background-color: var(--color-reset-button);
+    color: var(--color-error);
+    border: none;
+    padding: 8px 20px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-weight: bold;
+    font-family: var(--font-primary);
+    font-size: var(--font-size-small);
+}
+
+.settings-button-reset:hover {
+    background-color: var(--color-reset-button-hover);
+}
+
+.settings-button-reset:focus {
+    outline: 2px solid var(--color-error);
+    outline-offset: 2px;
 }
 
 /* Settings Groups */

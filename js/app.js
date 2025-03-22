@@ -6,6 +6,10 @@
  * and handles the overall application lifecycle.
  * 
  * Version History:
+ * 5.1.1 (2025-03-25) - Added reset button and changed default to 7 departures
+ * 5.1.0 (2025-03-25) - Removed past departures from display; next departure always first
+ * 5.0.0 (2025-03-24) - Added day-based time identification for proper sorting and deduplication
+ * 4.2.0 (2025-03-24) - Removed maximum departure limit to allow flexible display of all departures
  * 4.1.0 (2025-03-23) - Limited max departures to 7 to prevent display issues
  * 4.0.0 (2025-03-21) - Complete redesign with new JSON structure for day type handling
  * 3.0.0 (2025-03-20) - Added support for separate day types
@@ -18,7 +22,7 @@
  * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 4.1.0
+ * @version 5.1.1
  * @license MIT
  */
 
@@ -36,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         highlightStop: "Lumabryggan",    // Stop to highlight in the UI
         cityHighlightStop: "Lumabryggan", // Stop to highlight for city line (to city)
         cityReturnStop: "Nybroplan",     // Return stop to highlight for city direction
-        maxVisibleDepartures: 7,         // Maximum number of visible departures per stop (capped at 7)
+        maxVisibleDepartures: 7,         // Default number of visible departures per stop (changed from 9 to 7)
         dataPaths: {                     // Paths to config files
             sjoConfig: './data/ressel-sjo-config.json',
             cityConfig: './data/ressel-city-config.json'
@@ -50,8 +54,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Try to load config from localStorage if they exist
     loadConfigFromLocalStorage();
 
-    // Ensure maxVisibleDepartures is never more than 7 to prevent display issues
-    config.maxVisibleDepartures = Math.min(config.maxVisibleDepartures, 7);
     document.documentElement.style.setProperty('--visible-departures', config.maxVisibleDepartures);
 
     // Store loaded timetable data for different days
@@ -77,6 +79,75 @@ document.addEventListener('DOMContentLoaded', async function() {
     let settingsPanel = null;
 
     /**
+     * Converts JavaScript day (0-6, where 0 is Sunday) to app day (1-7, where 1 is Monday)
+     * @param {number} jsDay JavaScript day (0-6)
+     * @returns {number} App day (1-7)
+     */
+    function convertJsDayToAppDay(jsDay) {
+        // Convert JavaScript's 0-6 (Sun-Sat) to 1-7 (Mon-Sun)
+        return jsDay === 0 ? 7 : jsDay;
+    }
+
+    /**
+     * Gets the day number (1-7) for a given date
+     * @param {Date} date Date to get day number for
+     * @returns {number} Day number (1-7, where 1 is Monday)
+     */
+    function getDayNumber(date) {
+        return convertJsDayToAppDay(date.getDay());
+    }
+
+    /**
+     * Creates time objects with day information
+     * @param {Array<string>} times Array of time strings
+     * @param {Date} date Date for these times
+     * @param {Date} currentDate Current date for comparison
+     * @returns {Array<Object>} Enhanced time objects with day information
+     */
+    function createEnhancedTimeObjects(times, date, currentDate) {
+        if (!Array.isArray(times)) return [];
+        
+        const dayNumber = getDayNumber(date);
+        let dayOffset = 0;
+        
+        // Calculate day offset based on dates
+        if (date.toDateString() !== currentDate.toDateString()) {
+            // Simple calculation for tomorrow (most common case)
+            if (date.getDate() === currentDate.getDate() + 1 &&
+                date.getMonth() === currentDate.getMonth() &&
+                date.getFullYear() === currentDate.getFullYear()) {
+                dayOffset = 1;
+            } else {
+                // For other cases, calculate exact difference
+                const diffTime = date.getTime() - currentDate.getTime();
+                dayOffset = Math.ceil(diffTime / (1000 * 3600 * 24));
+            }
+        }
+        
+        return times.map(time => ({
+            time: time,
+            isToday: dayOffset === 0,
+            day: dayNumber,
+            dayOffset: dayOffset
+        }));
+    }
+
+    /**
+     * Resets all settings to default values and reloads the page
+     */
+    function resetSettings() {
+        if (localStorage) {
+            localStorage.removeItem('sjostadsfarjetrafiken_settings');
+        }
+        
+        // Clear URL parameters as well
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Reload the page to apply default settings
+        window.location.reload();
+    }
+
+    /**
      * Loads configuration from localStorage
      * This preserves user preferences between sessions
      */
@@ -100,8 +171,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
                 
                 if (savedSettings.maxVisibleDepartures !== undefined && !urlHasParam('maxdep')) {
-                    // Ensure maxVisibleDepartures is never more than 7
-                    config.maxVisibleDepartures = Math.min(savedSettings.maxVisibleDepartures, 7);
+                    config.maxVisibleDepartures = savedSettings.maxVisibleDepartures;
                     // Update CSS variable
                     document.documentElement.style.setProperty('--visible-departures', config.maxVisibleDepartures);
                 }
@@ -208,8 +278,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (urlParams.has('maxdep')) {
             let maxDep = parseInt(urlParams.get('maxdep'), 10);
             if (!isNaN(maxDep) && maxDep > 0) {
-                // Cap at 7 to prevent display issues
-                config.maxVisibleDepartures = Math.min(maxDep, 7);
+                config.maxVisibleDepartures = maxDep;
                 // Update CSS variable
                 document.documentElement.style.setProperty('--visible-departures', config.maxVisibleDepartures);
             }
@@ -230,7 +299,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 config.maxVisibleDepartures = 4;
                 document.documentElement.style.setProperty('--visible-departures', 4);
             } else {
-                // Desktop default capped at 7
+                // Desktop default, changed from 9 to 7
                 config.maxVisibleDepartures = 7;
                 document.documentElement.style.setProperty('--visible-departures', 7);
             }
@@ -569,14 +638,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         directionsSection.style.display = config.showEmelietrafiken ? 'block' : 'none';
         panelContent.appendChild(directionsSection);
         
-        // Add Visning section with max 7 departures
+        // Add Visning section with expanded range of departures
         panelContent.appendChild(createSettingsSection('Visning', [
             {
                 type: 'select',
                 id: 'maxdep-select',
                 label: 'Antal avgångar:',
                 value: config.maxVisibleDepartures,
-                options: Array.from({length: 5}, (_, i) => i + 3).map(num => ({
+                options: Array.from({length: 13}, (_, i) => i + 3).map(num => ({
                     value: num,
                     text: num.toString()
                 })),
@@ -677,16 +746,32 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         settingsPanel.appendChild(panelContent);
         
-        // Add panel footer with close button
+        // Add panel footer with close button and reset button
         const panelFooter = document.createElement('div');
         panelFooter.className = 'settings-footer';
         
+        // Reset button
+        const resetButton = document.createElement('button');
+        resetButton.className = 'settings-button-reset';
+        resetButton.textContent = 'Återställ';
+        resetButton.setAttribute('aria-label', 'Återställ alla inställningar till standard');
+        resetButton.addEventListener('click', resetSettings);
+        
+        // Close button
         const closeSettingsButton = document.createElement('button');
         closeSettingsButton.className = 'settings-button-close';
         closeSettingsButton.textContent = 'Stäng';
         closeSettingsButton.addEventListener('click', () => {
             closeSettingsPanel();
         });
+        
+        // First add reset button, then spacer, then close button
+        panelFooter.appendChild(resetButton);
+        
+        // Add a spacer div to push close button to the right
+        const spacer = document.createElement('div');
+        spacer.style.flexGrow = '1';
+        panelFooter.appendChild(spacer);
         
         panelFooter.appendChild(closeSettingsButton);
         settingsPanel.appendChild(panelFooter);
@@ -930,14 +1015,18 @@ document.addEventListener('DOMContentLoaded', async function() {
             const dayTypeText = sjoData.metadata.day_type === 'weekday' ? 'Vardagar' : 'Helgtrafik';
             const processedDepartures = {};
             
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
             for (const [stop, times] of Object.entries(sjoData.departures)) {
-                // Create array with today's times
-                const todayTimes = times.map(time => ({ time, isToday: true }));
+                // Create array with today's times with day information
+                const todayTimes = createEnhancedTimeObjects(times, now, now);
                 
                 // Add tomorrow's times (if we have them and they're needed)
                 let tomorrowTimes = [];
                 if (sjoTomorrow && sjoTomorrow.departures && sjoTomorrow.departures[stop]) {
-                    tomorrowTimes = sjoTomorrow.departures[stop].map(time => ({ time, isToday: false }));
+                    tomorrowTimes = createEnhancedTimeObjects(sjoTomorrow.departures[stop], tomorrow, now);
                 }
                 
                 // Combine both arrays
@@ -1013,6 +1102,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         const dayTypeText = cityData.metadata.day_type === 'weekday' ? 'Vardagar' : 
                            (cityData.metadata.day_type === 'saturday' ? 'Lördagar' : 'Söndagar');
         
+        const now = new Date();
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
         // TO CITY
         if (cityData.to_city) {
             let toCityDepartures;
@@ -1029,8 +1122,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Process today's departures
             const processedToCity = {};
             for (const [stop, times] of Object.entries(toCityDepartures)) {
-                // Create array with today's times
-                const todayTimes = times.map(time => ({ time, isToday: true }));
+                // Create array with today's times with day information
+                const todayTimes = createEnhancedTimeObjects(times, now, now);
                 
                 // Get tomorrow's times if available
                 let tomorrowTimes = [];
@@ -1044,7 +1137,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                     
                     if (tomorrowDepartures[stop]) {
-                        tomorrowTimes = tomorrowDepartures[stop].map(time => ({ time, isToday: false }));
+                        tomorrowTimes = createEnhancedTimeObjects(tomorrowDepartures[stop], tomorrow, now);
                     }
                 }
                 
@@ -1081,8 +1174,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Process today's and tomorrow's departures
             const processedFromCity = {};
             for (const [stop, times] of Object.entries(fromCityDepartures)) {
-                // Create array with today's times
-                const todayTimes = times.map(time => ({ time, isToday: true }));
+                // Create array with today's times with day information
+                const todayTimes = createEnhancedTimeObjects(times, now, now);
                 
                 // Get tomorrow's times if available
                 let tomorrowTimes = [];
@@ -1096,7 +1189,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                     
                     if (tomorrowDepartures[stop]) {
-                        tomorrowTimes = tomorrowDepartures[stop].map(time => ({ time, isToday: false }));
+                        tomorrowTimes = createEnhancedTimeObjects(tomorrowDepartures[stop], tomorrow, now);
                     }
                 }
                 

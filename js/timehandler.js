@@ -5,6 +5,9 @@
  * timetable application. This module handles time conversions and departure sorting.
  * 
  * Version History:
+ * 5.1.0 (2025-03-25) - Removed past departures from display; next departure always first
+ * 5.0.1 (2025-03-25) - Fixed deduplication logic to use uniqueId instead of time
+ * 5.0.0 (2025-03-24) - Added day-based time identification for proper sorting and deduplication
  * 4.0.0 (2025-03-21) - Simplified for new JSON structure, removed schedule type detection
  * 3.0.0 (2025-03-20) - Added support for separate day types
  * 2.4.0 (2025-03-22) - Updated version numbering for consistency with other components
@@ -13,7 +16,7 @@
  * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 4.0.0
+ * @version 5.1.0
  * @license MIT
  */
 
@@ -48,9 +51,60 @@ class TimeHandler {
     }
 
     /**
+     * Converts JavaScript day (0-6, where 0 is Sunday) to app day (1-7, where 1 is Monday)
+     * @param {number} jsDay JavaScript day (0-6)
+     * @returns {number} App day (1-7)
+     */
+    convertJsDayToAppDay(jsDay) {
+        // Convert JavaScript's 0-6 (Sun-Sat) to 1-7 (Mon-Sun)
+        return jsDay === 0 ? 7 : jsDay;
+    }
+
+    /**
+     * Gets the day number (1-7) for a given date
+     * @param {Date} date Date to get day number for
+     * @returns {number} Day number (1-7, where 1 is Monday)
+     */
+    getDayNumber(date) {
+        return this.convertJsDayToAppDay(date.getDay());
+    }
+
+    /**
+     * Calculates the day difference between two day numbers, handling week wrapping
+     * @param {number} day1 First day (1-7)
+     * @param {number} day2 Second day (1-7)
+     * @returns {number} Days difference (positive if day2 is after day1, negative if before)
+     */
+    getDayDifference(day1, day2) {
+        // Handle direct difference
+        let diff = day2 - day1;
+        
+        // Adjust for week wrapping
+        if (diff > 3) {
+            diff = diff - 7;
+        } else if (diff < -3) {
+            diff = diff + 7;
+        }
+        
+        return diff;
+    }
+
+    /**
+     * Creates a unique ID for a time-day combination
+     * @param {number} day Day number (1-7)
+     * @param {string} time Time in HH:MM format
+     * @returns {string} Unique ID
+     */
+    createUniqueTimeId(day, time) {
+        return `${day}-${time}`;
+    }
+
+    /**
      * Processes and sorts schedule times for display
-     * The function expects an array of objects with time and isToday properties
-     * @param {Array<Object>} times Array of time objects with format: {time: "HH:MM", isToday: boolean}
+     * Now enhanced with day-based identification for proper sorting and deduplication
+     * 
+     * @param {Array<Object>} times Array of time objects with format: 
+     *                              {time: "HH:MM", isToday: boolean, day?: number, dayOffset?: number}
      * @param {number} maxDepartures Maximum number of departures to return
      * @returns {Array<Object>} Processed and sorted departure times
      */
@@ -62,60 +116,93 @@ class TimeHandler {
 
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const currentDay = this.getDayNumber(now);
         
-        // Process times and create extended information
+        // Process times and create extended information with day awareness
         let processedTimes = times.map(timeObj => {
             const minutesSinceMidnight = this.timeToMinutes(timeObj.time);
             
-            // Calculate difference based on whether it's today or tomorrow
+            // Get the day and dayOffset - either from the object or calculate from isToday
+            let day = timeObj.day;
+            let dayOffset = timeObj.dayOffset;
+            
+            // If day is not provided but isToday is, calculate day and dayOffset
+            if (day === undefined) {
+                if (timeObj.isToday) {
+                    day = currentDay;
+                    dayOffset = 0;
+                } else {
+                    // For tomorrow
+                    const tomorrow = new Date(now);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    day = this.getDayNumber(tomorrow);
+                    dayOffset = 1;
+                }
+            }
+            
+            // Calculate total minutes including day offset
+            const totalMinutes = dayOffset * 24 * 60 + minutesSinceMidnight;
+            
+            // Create a unique ID for this time-day combination
+            const uniqueId = this.createUniqueTimeId(day, timeObj.time);
+            
+            // Calculate time difference from now
             let diff;
-            if (timeObj.isToday) {
+            if (dayOffset === 0 && minutesSinceMidnight >= currentMinutes) {
+                // Today and time is in future
+                diff = minutesSinceMidnight - currentMinutes;
+            } else if (dayOffset === 0 && minutesSinceMidnight < currentMinutes) {
+                // Today but time is in past
                 diff = minutesSinceMidnight - currentMinutes;
             } else {
-                // For tomorrow's times, add 24 hours worth of minutes
-                diff = (24 * 60 + minutesSinceMidnight) - currentMinutes;
+                // Future day
+                diff = (dayOffset * 24 * 60) + minutesSinceMidnight - currentMinutes;
             }
             
             return {
                 time: timeObj.time,
-                minutes: timeObj.isToday ? minutesSinceMidnight : minutesSinceMidnight + 24 * 60,
+                minutes: totalMinutes,
+                day: day,
+                dayOffset: dayOffset,
                 diff: diff,
                 isPast: diff < 0,
-                isToday: timeObj.isToday
+                isToday: dayOffset === 0,
+                uniqueId: uniqueId
             };
         });
 
-        // Sort by time difference
-        processedTimes.sort((a, b) => a.diff - b.diff);
+        // Deduplicate times by selecting the instance that's closest to now
+        const uniqueTimes = [];
+        const seenIds = new Set();
+        
+        // Sort first by diff to ensure we get the closest instances
+        processedTimes.sort((a, b) => Math.abs(a.diff) - Math.abs(b.diff));
+        
+        // Then deduplicate using uniqueId instead of just time
+        for (const time of processedTimes) {
+            if (!seenIds.has(time.uniqueId)) {  // Fixed: Now using uniqueId instead of time
+                uniqueTimes.push(time);
+                seenIds.add(time.uniqueId);     // Fixed: Now using uniqueId instead of time
+            }
+        }
+        
+        // Resort by absolute time difference
+        uniqueTimes.sort((a, b) => a.diff - b.diff);
 
         // Find the next departure
-        const nextDepartureIndex = processedTimes.findIndex(t => !t.isPast);
+        const nextDepartureIndex = uniqueTimes.findIndex(t => !t.isPast);
         
         let selectedTimes;
         if (nextDepartureIndex === -1) {
             // If all departures are past, show the last ones
-            selectedTimes = processedTimes.slice(-maxDepartures);
+            selectedTimes = uniqueTimes.slice(-maxDepartures);
         } else {
-            // Get the next departure and future departures
-            const nextDeparture = processedTimes[nextDepartureIndex];
-            const futureDepartures = processedTimes.slice(
-                nextDepartureIndex + 1,
-                nextDepartureIndex + maxDepartures
-            );
-            
-            selectedTimes = [nextDeparture, ...futureDepartures];
-            
-            // Add past departures if space allows
-            const remainingSlots = maxDepartures - selectedTimes.length;
-            if (remainingSlots > 0) {
-                const pastDepartures = processedTimes
-                    .slice(Math.max(0, nextDepartureIndex - remainingSlots), nextDepartureIndex)
-                    .reverse();
-                selectedTimes = [...pastDepartures, ...selectedTimes];
-            }
+            // FIXED: Get ONLY the next departure and future departures
+            // No past departures are included at all
+            selectedTimes = uniqueTimes.slice(nextDepartureIndex, nextDepartureIndex + maxDepartures);
         }
 
-        // Return final format
+        // Return final format compatible with original API
         return selectedTimes.map(t => ({
             time: t.time,
             isToday: t.isToday
