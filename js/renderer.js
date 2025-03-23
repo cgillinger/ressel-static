@@ -6,6 +6,8 @@
  * highlight-effekter för avgångar.
  * 
  * Versionshistorik:
+ * 7.3.0 (2025-04-01) - Flyttad position av högtalarikonerna till tidtabellstitel
+ * 7.1.0 (2025-03-31) - Borttagen visning av dagtyp i tidtabelltitel
  * 7.0.4 (2025-03-31) - Fixad bugg med talsyntes-knappens placering och rendering
  * 7.0.2 (2025-03-31) - Fixad bugg med alla avgångar markerade som highlight
  * 7.0.1 (2025-03-31) - Fixad bugg med global Renderer-klass
@@ -20,7 +22,7 @@
  * 1.0.0 (2024-01-11) - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 7.0.4
+ * @version 7.3.0
  * @license MIT
  */
 
@@ -34,6 +36,9 @@ class Renderer {
         this.config = config;
         // Håll reda på aktiva talsyntesinstanser
         this.activeSpeechSynthesis = null;
+        // Lagra senaste upplästa stop och tid
+        this.lastReadStop = null;
+        this.lastReadTime = null;
     }
 
     /**
@@ -50,7 +55,7 @@ class Renderer {
      * Skapar en tidtabellsvy
      * @param {Object} timetableData - Tidtabellsdata
      * @param {string} title - Tidtabellstitel
-     * @param {string} subtitle - Tidtabellsundertitel
+     * @param {string} subtitle - Tidtabellsundertitel (används inte längre)
      * @param {string} highlightStop - Hållplats att markera
      * @param {Object} disembarkOnlyToday - "Endast avstigning"-tider för idag
      * @param {Object} disembarkOnlyTomorrow - "Endast avstigning"-tider för imorgon
@@ -60,8 +65,8 @@ class Renderer {
         const timetable = document.createElement("div");
         timetable.className = "timetable";
         
-        // Lägg till titel och undertitel
-        timetable.appendChild(this.createTitleSection(title, subtitle));
+        // Lägg till titel (utan undertitel) och talsyntes-knapp om aktiverad
+        timetable.appendChild(this.createTitleSection(title, timetableData, highlightStop));
         
         // Kolla om det finns avgångar att visa
         if (timetableData && timetableData.departures) {
@@ -97,12 +102,13 @@ class Renderer {
     }
 
     /**
-     * Skapar titelsektionen för en tidtabell
+     * Skapar titelsektionen för en tidtabell med talsyntes-knapp
      * @param {string} title - Huvudtitel
-     * @param {string} subtitle - Undertitel
+     * @param {Object} timetableData - Tidtabellsdata
+     * @param {string} highlightStop - Hållplats att markera
      * @returns {HTMLElement} Titelsektionselement
      */
-    createTitleSection(title, subtitle) {
+    createTitleSection(title, timetableData, highlightStop) {
         const titleSection = document.createElement("div");
         titleSection.className = "title-section";
         
@@ -110,14 +116,79 @@ class Renderer {
         titleElement.className = "title";
         titleElement.textContent = title;
         
-        const subtitleElement = document.createElement("div");
-        subtitleElement.className = "subtitle";
-        subtitleElement.textContent = subtitle;
-        
+        // Lägg till titelelementet
         titleSection.appendChild(titleElement);
-        titleSection.appendChild(subtitleElement);
+        
+        // Lägg till talsyntes-knapp om aktiverad och data finns
+        if (this.config.showSpeechSynthesis && timetableData && timetableData.departures && highlightStop) {
+            // Kolla om det finns tider för den markerade hållplatsen
+            const times = timetableData.departures[highlightStop];
+            if (times && times.length > 0) {
+                // Skapa och lägg till talsyntes-knapp i titelsektionen
+                const speechButton = this.createSpeechButtonForTitle(highlightStop, times[0]);
+                titleSection.appendChild(speechButton);
+            }
+        }
         
         return titleSection;
+    }
+
+    /**
+     * Skapar en talsyntes-knapp för titelsektionen
+     * @param {string} highlightStop - Markerad hållplats
+     * @param {Object} firstTime - Första tiden för hållplatsen
+     * @returns {HTMLElement} Talsyntes-knapp
+     */
+    createSpeechButtonForTitle(highlightStop, firstTime) {
+        const button = document.createElement("button");
+        button.className = "speech-button title-speech-button";
+        button.innerHTML = "&#128266;"; // Högtalarsymbol
+        button.setAttribute("aria-label", "Läs upp nästa avgång från " + highlightStop);
+        button.setAttribute("title", "Läs upp nästa avgång");
+        
+        button.addEventListener("click", () => {
+            // Stoppa eventuell pågående uppläsning
+            if (this.activeSpeechSynthesis) {
+                window.speechSynthesis.cancel();
+                this.activeSpeechSynthesis = null;
+                
+                // Ta bort highlighting från andra knappar
+                document.querySelectorAll('.speech-button.speaking').forEach(btn => {
+                    if (btn !== button) {
+                        btn.classList.remove('speaking');
+                    }
+                });
+            }
+            
+            // Läs upp information om nästa avgång
+            const message = `Nästa avgång från ${highlightStop} är klockan ${firstTime.time.replace(':', ' och ')}`;
+            const speech = new SpeechSynthesisUtterance(message);
+            speech.lang = "sv-SE";
+            
+            speech.onstart = () => {
+                button.classList.add("speaking");
+                this.activeSpeechSynthesis = speech;
+                
+                // Spara senaste upplästa stopp och tid
+                this.lastReadStop = highlightStop;
+                this.lastReadTime = firstTime.time;
+            };
+            
+            speech.onend = () => {
+                button.classList.remove("speaking");
+                this.activeSpeechSynthesis = null;
+            };
+            
+            speech.onerror = () => {
+                button.classList.remove("speaking");
+                this.activeSpeechSynthesis = null;
+                console.error("Fel vid talsyntes");
+            };
+            
+            window.speechSynthesis.speak(speech);
+        });
+        
+        return button;
     }
 
     /**
@@ -127,7 +198,7 @@ class Renderer {
     createDeparturesHeader() {
         const header = document.createElement("div");
         header.className = "departures-header";
-        header.textContent = "Nästa avgångar";
+        header.textContent = "Avgångar";
         return header;
     }
 
@@ -177,16 +248,6 @@ class Renderer {
         }
         
         row.appendChild(timesElement);
-        
-        // Lägg till talsyntes-knapp för första tiden om aktiverat och det är en markerad hållplats
-        if (this.config.showSpeechSynthesis && isHighlighted && times && times.length > 0) {
-            const speechButton = this.createSpeechButton(stop, times[0].time);
-            // Lägg till knappen efter den första tiden
-            if (timesElement.firstChild) {
-                timesElement.firstChild.appendChild(speechButton);
-            }
-        }
-        
         return row;
     }
 
@@ -265,60 +326,6 @@ class Renderer {
         }
         
         return timeElement;
-    }
-
-    /**
-     * Skapar en talsyntes-knapp för att läsa upp nästa avgång
-     * @param {string} stop - Hållplatsnamn
-     * @param {string} time - Avgångstid
-     * @returns {HTMLElement} Talsyntes-knapp
-     */
-    createSpeechButton(stop, time) {
-        const button = document.createElement("button");
-        button.className = "speech-button";
-        button.innerHTML = "&#128266;"; // Högtalarsymbol
-        button.setAttribute("aria-label", "Läs upp avgångstid");
-        button.setAttribute("title", "Läs upp avgångstid");
-        
-        button.addEventListener("click", () => {
-            // Stoppa eventuell pågående uppläsning
-            if (this.activeSpeechSynthesis) {
-                window.speechSynthesis.cancel();
-                this.activeSpeechSynthesis = null;
-                
-                // Ta bort highlighting från andra knappar
-                document.querySelectorAll('.speech-button.speaking').forEach(btn => {
-                    if (btn !== button) {
-                        btn.classList.remove('speaking');
-                    }
-                });
-            }
-            
-            // Läs upp information om nästa avgång
-            const message = `Nästa avgång från ${stop} är klockan ${time.replace(':', ' och ')}`;
-            const speech = new SpeechSynthesisUtterance(message);
-            speech.lang = "sv-SE";
-            
-            speech.onstart = () => {
-                button.classList.add("speaking");
-                this.activeSpeechSynthesis = speech;
-            };
-            
-            speech.onend = () => {
-                button.classList.remove("speaking");
-                this.activeSpeechSynthesis = null;
-            };
-            
-            speech.onerror = () => {
-                button.classList.remove("speaking");
-                this.activeSpeechSynthesis = null;
-                console.error("Fel vid talsyntes");
-            };
-            
-            window.speechSynthesis.speak(speech);
-        });
-        
-        return button;
     }
 
     /**

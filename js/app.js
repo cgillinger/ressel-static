@@ -6,6 +6,7 @@
  * och hanterar applikationens övergripande livscykel.
  * 
  * Versionshistorik:
+ * 7.3.0 (2025-04-01) - Ta bort "Senaste uppdatering"-text, ändra standardvärde för talsyntes
  * 7.2.2 (2025-03-31) - Fixad bugg med Återställ-knappen
  * 7.2.1 (2025-03-31) - Fixad bugg med Renderer-referens i GitHub Pages
  * 7.2.0 (2025-03-30) - Fixad cache-busting för GitHub Pages
@@ -29,7 +30,7 @@
  * 1.0.0 (2024-01-11) - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 7.2.2
+ * @version 7.3.0
  * @license MIT
  */
 
@@ -45,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         showBothDirections: true,        // Visa både utgående och returresor
         showSjostadstrafiken: true,      // Visa Sjöstadstrafiken tidtabell
         showEmelietrafiken: true,        // Visa Emelietrafiken (M/S Emelie) tidtabell
-        showSpeechSynthesis: true,       // Visa talsyntes-knappar för tillgänglighet
+        showSpeechSynthesis: false,      // Visa talsyntes-knappar för tillgänglighet (ändrat till false)
         showDisembarkOnly: true,         // Visa "Endast avstigning" indikator (aktivt som standard)
         highlightStop: "Lumabryggan",    // Hållplats att markera i användargränssnittet
         cityHighlightStop: "Lumabryggan", // Hållplats att markera för citylinjen (till city)
@@ -202,7 +203,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             config.highlightStop = "Lumabryggan";
             config.cityHighlightStop = "Lumabryggan";
             config.cityReturnStop = "Nybroplan";
-            config.showSpeechSynthesis = true;
+            config.showSpeechSynthesis = false; // Ändrad till false för att stänga av talsyntes som standard
             config.showDisembarkOnly = true;
             
             // Uppdatera CSS-variabel
@@ -1220,11 +1221,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 infoElement.className = "validity-info";
                 infoElement.innerHTML = `Aktuell tidtabell gäller: ${validFrom.toLocaleDateString('sv-SE')} - ${validTo.toLocaleDateString('sv-SE')}`;
                 
-                // Lägg till senaste uppdateringstid om den finns tillgänglig
-                if (timetableData.lastUpdate) {
-                    const lastUpdateTime = new Date(timetableData.lastUpdate);
-                    infoElement.innerHTML += ` | Senaste uppdatering: ${lastUpdateTime.toLocaleTimeString('sv-SE')}`;
-                }
+                // TA BORT senaste uppdateringstid
                 
                 wrapper.appendChild(infoElement);
             }
@@ -1289,11 +1286,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 );
             }
 
+            // Skicka tomt som dayTypeText för att inte visa det
             wrapper.appendChild(
                 renderer.createTimetable(
                     { departures: processedDepartures },
                     "Sjöstadstrafiken",
-                    dayTypeText,
+                    "", // Tomt istället för dayTypeText
                     config.highlightStop,
                     null,  // Inga "Endast avstigning" tider för Sjöstadstrafiken idag
                     null   // Inga "Endast avstigning" tider för Sjöstadstrafiken imorgon
@@ -1407,11 +1405,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             const disembarkOnlyToCityToday = timetableData.today.disembarkOnly?.toCity || null;
             const disembarkOnlyToCityTomorrow = timetableData.tomorrow.disembarkOnly?.toCity || null;
 
+            // Skicka tomt som dayTypeText för att inte visa det
             wrapper.appendChild(
                 renderer.createTimetable(
                     { departures: processedToCity },
                     "M/S Emelie → City",
-                    dayTypeText,
+                    "", // Tomt istället för dayTypeText
                     config.cityHighlightStop,
                     disembarkOnlyToCityToday,    // Dagens "Endast avstigning" tider för TO_CITY
                     disembarkOnlyToCityTomorrow  // Morgondagens "Endast avstigning" tider för TO_CITY
@@ -1465,11 +1464,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             const disembarkOnlyFromCityToday = timetableData.today.disembarkOnly?.fromCity || null;
             const disembarkOnlyFromCityTomorrow = timetableData.tomorrow.disembarkOnly?.fromCity || null;
 
+            // Skicka tomt som dayTypeText för att inte visa det
             wrapper.appendChild(
                 renderer.createTimetable(
                     { departures: processedFromCity },
                     "M/S Emelie ← City",
-                    dayTypeText,
+                    "", // Tomt istället för dayTypeText
                     config.cityReturnStop,
                     disembarkOnlyFromCityToday,     // Dagens "Endast avstigning" tider för FROM_CITY
                     disembarkOnlyFromCityTomorrow   // Morgondagens "Endast avstigning" tider för FROM_CITY

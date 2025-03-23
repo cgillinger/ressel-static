@@ -5,6 +5,8 @@
  * Inkluderar mörkt tema, responsiv design och tillgänglighetsfunktioner.
  * 
  * Versionshistorik:
+ * 3.2.0 (2025-04-01) - Uppdaterad position av talsyntes-knappen till titelsektionen
+ * 3.1.0 (2025-03-31) - Justerad layout för titelsektionen, borttagna undertitlar
  * 3.0.2 (2025-03-31) - Fixad styling för talsyntes-knappen med korrekt placering inom tiden
  * 3.0.1 (2025-03-31) - Fixad styling för talsyntes-knappens container och placering
  * 3.0.0 (2025-03-26) - Tillagd styling för "Endast avstigning" indikator
@@ -17,7 +19,7 @@
  * 1.0.0 (2024-01-11) - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 3.0.2
+ * @version 3.2.0
  * @license MIT
  */
 
@@ -90,7 +92,7 @@ body {
     padding: 20px;
 }
 
-/* Speech Synthesis Button */
+/* Speech Synthesis Button - Updated for title positioning */
 .speech-button {
     background-color: var(--color-speech-button);
     color: var(--color-text-bright);
@@ -105,9 +107,21 @@ body {
     cursor: pointer;
     transition: background-color var(--transition-speed) ease;
     position: absolute;
-    top: -10px;
+    top: -6px;
     right: -10px;
     z-index: 5;
+}
+
+/* Title speech button styling - New */
+.title-speech-button {
+    position: relative;
+    top: 0;
+    right: 0;
+    margin-left: auto;
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+    background-color: rgba(0, 128, 0, 0.25);
 }
 
 .speech-button:hover {
@@ -428,15 +442,15 @@ body {
     max-width: 100%;
 }
 
-/* Title Section */
+/* Title Section - Updated for flexbox layout */
 .MMM-Resseltrafiken .title-section {
     padding-bottom: 10px;
     margin-bottom: 15px;
     position: relative;
-    text-align: right;
     display: flex;
-    justify-content: space-between;
+    justify-content: space-between; /* Space between title and speech button */
     align-items: center;
+    width: 100%;
 }
 
 /* Title Styling */
@@ -684,10 +698,10 @@ footer {
         height: 40px;
     }
     
-    .speech-button {
-        width: 22px;
-        height: 22px;
-        font-size: 12px;
+    .title-speech-button {
+        width: 26px;
+        height: 26px;
+        font-size: 14px;
     }
 
     #app {
@@ -712,10 +726,10 @@ footer {
         height: 30px;
     }
     
-    .speech-button {
-        width: 20px;
-        height: 20px;
-        font-size: 10px;
+    .title-speech-button {
+        width: 24px;
+        height: 24px;
+        font-size: 12px;
     }
     
     .settings-panel {
