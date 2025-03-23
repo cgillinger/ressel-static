@@ -6,6 +6,8 @@
  * highlight-effekter för avgångar.
  * 
  * Versionshistorik:
+ * 7.5.0 (2025-04-05) - Förbättrad highlight-hantering, nu visas highlight även för morgondagens första avgång
+ * 7.4.0 (2025-04-03) - Förbättrad talsyntes för "Endast avstigning" och "Snar avgång"
  * 7.3.0 (2025-04-01) - Flyttad position av högtalarikonerna till tidtabellstitel
  * 7.1.0 (2025-03-31) - Borttagen visning av dagtyp i tidtabelltitel
  * 7.0.4 (2025-03-31) - Fixad bugg med talsyntes-knappens placering och rendering
@@ -22,7 +24,7 @@
  * 1.0.0 (2024-01-11) - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 7.3.0
+ * @version 7.5.0
  * @license MIT
  */
 
@@ -66,7 +68,7 @@ class Renderer {
         timetable.className = "timetable";
         
         // Lägg till titel (utan undertitel) och talsyntes-knapp om aktiverad
-        timetable.appendChild(this.createTitleSection(title, timetableData, highlightStop));
+        timetable.appendChild(this.createTitleSection(title, timetableData, highlightStop, disembarkOnlyToday, disembarkOnlyTomorrow));
         
         // Kolla om det finns avgångar att visa
         if (timetableData && timetableData.departures) {
@@ -106,9 +108,11 @@ class Renderer {
      * @param {string} title - Huvudtitel
      * @param {Object} timetableData - Tidtabellsdata
      * @param {string} highlightStop - Hållplats att markera
+     * @param {Object} disembarkOnlyToday - "Endast avstigning"-tider för idag
+     * @param {Object} disembarkOnlyTomorrow - "Endast avstigning"-tider för imorgon
      * @returns {HTMLElement} Titelsektionselement
      */
-    createTitleSection(title, timetableData, highlightStop) {
+    createTitleSection(title, timetableData, highlightStop, disembarkOnlyToday, disembarkOnlyTomorrow) {
         const titleSection = document.createElement("div");
         titleSection.className = "title-section";
         
@@ -125,7 +129,11 @@ class Renderer {
             const times = timetableData.departures[highlightStop];
             if (times && times.length > 0) {
                 // Skapa och lägg till talsyntes-knapp i titelsektionen
-                const speechButton = this.createSpeechButtonForTitle(highlightStop, times[0]);
+                const speechButton = this.createSpeechButtonForTitle(
+                    highlightStop, 
+                    times[0], 
+                    this.isDisembarkOnlyTime(highlightStop, times[0], disembarkOnlyToday, disembarkOnlyTomorrow)
+                );
                 titleSection.appendChild(speechButton);
             }
         }
@@ -137,9 +145,10 @@ class Renderer {
      * Skapar en talsyntes-knapp för titelsektionen
      * @param {string} highlightStop - Markerad hållplats
      * @param {Object} firstTime - Första tiden för hållplatsen
+     * @param {boolean} isDisembarkOnly - Om avgången är "Endast avstigning"
      * @returns {HTMLElement} Talsyntes-knapp
      */
-    createSpeechButtonForTitle(highlightStop, firstTime) {
+    createSpeechButtonForTitle(highlightStop, firstTime, isDisembarkOnly) {
         const button = document.createElement("button");
         button.className = "speech-button title-speech-button";
         button.innerHTML = "&#128266;"; // Högtalarsymbol
@@ -160,8 +169,37 @@ class Renderer {
                 });
             }
             
-            // Läs upp information om nästa avgång
-            const message = `Nästa avgång från ${highlightStop} är klockan ${firstTime.time.replace(':', ' och ')}`;
+            // Avgör om det är en snar avgång (inom 10 minuter)
+            const [hours, minutes] = firstTime.time.split(":").map(Number);
+            const timeInMinutes = hours * 60 + minutes;
+            
+            const now = new Date();
+            const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+            const diffMinutes = timeInMinutes - currentTimeInMinutes;
+            
+            const isImminentDeparture = firstTime.isToday && diffMinutes >= 0 && diffMinutes < 10;
+            
+            // Skapa meddelande baserat på om det är "Endast avstigning" och/eller snar avgång
+            let message = "";
+            
+            if (isDisembarkOnly) {
+                if (isImminentDeparture) {
+                    message = `Snar avgång från ${highlightStop} klockan ${firstTime.time.replace(':', ' och ')}. Observera, endast avstigning vid denna hållplats.`;
+                } else if (firstTime.isToday) {
+                    message = `Nästa avgång från ${highlightStop} är klockan ${firstTime.time.replace(':', ' och ')}. Observera, endast avstigning vid denna hållplats.`;
+                } else {
+                    message = `Nästa avgång från ${highlightStop} är i morgon klockan ${firstTime.time.replace(':', ' och ')}. Observera, endast avstigning vid denna hållplats.`;
+                }
+            } else {
+                if (isImminentDeparture) {
+                    message = `Snar avgång från ${highlightStop} klockan ${firstTime.time.replace(':', ' och ')}.`;
+                } else if (firstTime.isToday) {
+                    message = `Nästa avgång från ${highlightStop} är klockan ${firstTime.time.replace(':', ' och ')}.`;
+                } else {
+                    message = `Nästa avgång från ${highlightStop} är i morgon klockan ${firstTime.time.replace(':', ' och ')}.`;
+                }
+            }
+            
             const speech = new SpeechSynthesisUtterance(message);
             speech.lang = "sv-SE";
             
@@ -235,13 +273,17 @@ class Renderer {
             noTimesSpan.style.fontStyle = "italic";
             timesElement.appendChild(noTimesSpan);
         } else {
+            // Kontrollera om det finns några avgångar för idag
+            const hasRemainingTodayDepartures = times.some(timeObj => timeObj.isToday && this.isDepartureInFuture(timeObj.time));
+            
             // Skapa tidselement för varje avgång
             times.forEach((timeObj, index) => {
                 const timeElement = this.createTimeElement(
                     timeObj.time, 
                     timeObj.isToday, 
-                    index === 0 && isHighlighted,  // Bara markera första tiden för den markerade hållplatsen
-                    this.isDisembarkOnlyTime(stop, timeObj, disembarkOnlyToday, disembarkOnlyTomorrow)
+                    (index === 0 && isHighlighted && (hasRemainingTodayDepartures || !timeObj.isToday)),  // Markera även första morgondagens avgång
+                    this.isDisembarkOnlyTime(stop, timeObj, disembarkOnlyToday, disembarkOnlyTomorrow),
+                    hasRemainingTodayDepartures
                 );
                 timesElement.appendChild(timeElement);
             });
@@ -249,6 +291,21 @@ class Renderer {
         
         row.appendChild(timesElement);
         return row;
+    }
+
+    /**
+     * Kontrollerar om en avgångstid är i framtiden
+     * @param {string} time - Tidssträng (HH:MM)
+     * @returns {boolean} Sant om tiden är i framtiden
+     */
+    isDepartureInFuture(time) {
+        const [hours, minutes] = time.split(":").map(Number);
+        const timeInMinutes = hours * 60 + minutes;
+        
+        const now = new Date();
+        const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+        
+        return timeInMinutes > currentTimeInMinutes;
     }
 
     /**
@@ -283,9 +340,10 @@ class Renderer {
      * @param {boolean} isToday - Om tiden är för idag
      * @param {boolean} isNextDeparture - Om detta är nästa avgång
      * @param {boolean} isDisembarkOnly - Om detta är "Endast avstigning"
+     * @param {boolean} hasRemainingTodayDepartures - Om det finns kvarvarande avgångar för idag
      * @returns {HTMLElement} Tidselement
      */
-    createTimeElement(time, isToday, isNextDeparture, isDisembarkOnly) {
+    createTimeElement(time, isToday, isNextDeparture, isDisembarkOnly, hasRemainingTodayDepartures) {
         const timeElement = document.createElement("span");
         timeElement.textContent = time;
         timeElement.className = "time";
@@ -298,16 +356,23 @@ class Renderer {
         const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
         const diffMinutes = timeInMinutes - currentTimeInMinutes;
         
-        // Lägg till klasser baserat på om det är morgondagens tid och nästa avgång
+        // Lägg till klasser baserat på om det är morgondagens tid
         if (!isToday) {
             timeElement.classList.add("tomorrow-time");
         }
         
-        // Bara markera om detta är nästa avgång OCH det är för idag
-        if (isNextDeparture && isToday) {
-            if (diffMinutes < 10 && diffMinutes >= 0) {
-                timeElement.classList.add("highlight-yellow");
-            } else if (diffMinutes >= 0) {
+        // Highlight-logik för nästa avgång
+        if (isNextDeparture) {
+            // Om det är dagens tid eller om den är morgondagens första tid och det inte finns några kvarvarande idag
+            if (isToday) {
+                // Normal highlight för dagens avgångar
+                if (diffMinutes < 10 && diffMinutes >= 0) {
+                    timeElement.classList.add("highlight-yellow");
+                } else if (diffMinutes >= 0) {
+                    timeElement.classList.add("highlight-green");
+                }
+            } else if (!hasRemainingTodayDepartures) {
+                // Om det inte finns några avgångar kvar idag, markera morgondagens första avgång med grön ram
                 timeElement.classList.add("highlight-green");
             }
         }
