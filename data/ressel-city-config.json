@@ -1,7 +1,7 @@
 {
   "_metadata": {
-    "version": "4.0.0",
-    "last_updated": "2025-03-21",
+    "version": "6.0.0",
+    "last_updated": "2025-03-26",
     "data_sources": [
       "CITY LINE VINTER 2024/2025 (PDF)",
       "CITY LINE VÅREN 2025 (PDF)"
@@ -38,7 +38,8 @@
       "payment": "Endast betalning med kort - Visa & Master Card",
       "children": "Barn under 13 år reser gratis i målsmans sällskap",
       "bicycles": "Cyklar medföres avgiftsfritt på egen risk",
-      "youth_age": "13-18 år"
+      "youth_age": "13-18 år",
+      "disembark_only": "Vissa avgångar är endast för avstigning vid Barnängsbryggan, Lumabryggan och Henriksdalsbryggan"
     }
   },
   "service_configuration": {
@@ -61,13 +62,25 @@
       ]
     },
     "disembark_only_rules": {
-      "morning_after": "12:14",
-      "afternoon_after": "18:44",
+      "description": "Allmänna regler för 'Endast avstigning'. Detaljerad information finns i respektive tidtabellfil.",
+      "weekday": {
+        "morning_after": "12:14",
+        "afternoon_after": "18:44"
+      },
+      "saturday": {
+        "winter": ["13:14", "17:44"],
+        "spring": ["12:14", "12:44", "13:44", "17:44", "20:14"]
+      },
+      "sunday": {
+        "winter": ["13:14", "17:44"],
+        "spring": ["12:14", "13:44", "17:44", "19:14"]
+      },
       "affected_stops": [
         "Barnängsbryggan",
         "Lumabryggan",
         "Henriksdalsbryggan"
-      ]
+      ],
+      "notes": "Endast riktning 'from_city' påverkas av dessa regler"
     }
   },
   "season_mapping": [

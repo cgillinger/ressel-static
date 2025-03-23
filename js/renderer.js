@@ -1,31 +1,35 @@
 /**
  * Resseltrafiken Web Application - UI Renderer Module
  * 
- * Handles all DOM manipulation and UI rendering for the Resseltrafiken
- * timetable application. Creates and manages the visual representation
- * of timetables and related UI elements.
+ * Hanterar all DOM-manipulation och UI-rendering för Resseltrafiken
+ * tidtabellsapplikation. Skapar och hanterar visuell representation
+ * av tidtabeller och relaterade UI-element.
  * 
- * Version History:
- * 4.0.0 (2025-03-21) - Updated for new JSON structure with separate day types
- * 2.4.0 (2025-03-22) - Added speech synthesis feature for accessibility
- * 2.0.0 (2025-01-16) - Converted to static web module, improved accessibility
- * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
+ * Versionshistorik:
+ * 7.1.0 (2025-03-29) - Fixat så fotnot bara visas när det faktiskt finns "Endast avstigning"-tider
+ * 7.0.0 (2025-03-28) - Fixad dagsbaserad hantering av "Endast avstigning"-indikatorer 
+ * 6.0.0 (2025-03-28) - Fixat MutationObserver-fel, förbättrad felhantering
+ * 5.0.0 (2025-03-26) - Standardiserad hantering av "Endast avstigning", förbättrad tillgänglighet
+ * 4.0.0 (2025-03-21) - Uppdaterad för ny JSON-struktur med separata dagtyper
+ * 2.4.0 (2025-03-22) - Lagt till talsyntes-funktion för tillgänglighet
+ * 2.0.0 (2025-01-16) - Konverterad till statisk webbmodul, förbättrad tillgänglighet
+ * 1.0.0 (2024-01-11) - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 4.0.0
+ * @version 7.1.0
  * @license MIT
  */
 
 class Renderer {
     /**
-     * Initializes the Renderer with configuration
-     * @param {Object} config Configuration object containing displayOptions
+     * Initierar Renderaren med konfiguration
+     * @param {Object} config Konfigurationsobjekt innehållande displayOptions
      */
     constructor(config) {
         this.config = config;
         this.setupStyles();
         
-        // Bind methods to ensure proper 'this' context
+        // Binder metoder för att säkerställa korrekt 'this'-kontext
         this.createWrapper = this.createWrapper.bind(this);
         this.createTimetable = this.createTimetable.bind(this);
         this.setupOverflowObservers = this.setupOverflowObservers.bind(this);
@@ -34,7 +38,7 @@ class Renderer {
     }
 
     /**
-     * Sets up CSS variables for dynamic styling
+     * Sätter upp CSS-variabler för dynamisk styling
      * @private
      */
     setupStyles() {
@@ -42,8 +46,8 @@ class Renderer {
     }
 
     /**
-     * Creates the main wrapper element
-     * @returns {HTMLElement} The wrapper element
+     * Skapar huvudwrapper-elementet
+     * @returns {HTMLElement} Wrapper-elementet
      */
     createWrapper() {
         const wrapper = document.createElement("div");
@@ -54,10 +58,10 @@ class Renderer {
     }
 
     /**
-     * Creates a notification element
-     * @param {HTMLElement} wrapper Parent element
-     * @param {string} message Notification message
-     * @param {string} type Notification type (warning, error, etc.)
+     * Skapar ett notifikationselement
+     * @param {HTMLElement} wrapper Förälderelement
+     * @param {string} message Notifikationsmeddelande
+     * @param {string} type Notifikationstyp (warning, error, etc.)
      */
     createNotification(wrapper, message, type) {
         const notification = document.createElement("div");
@@ -69,11 +73,11 @@ class Renderer {
     }
 
     /**
-     * Creates a timetable container with header
-     * @param {string} title Timetable title
-     * @param {string} scheduleType Schedule type (weekday/weekend)
-     * @param {string} highlightStop Stop that is highlighted
-     * @returns {HTMLElement} Timetable container
+     * Skapar en tidtabellsbehållare med rubrik
+     * @param {string} title Tidtabellens titel
+     * @param {string} scheduleType Schematyp (weekday/weekend)
+     * @param {string} highlightStop Hållplats som ska markeras
+     * @returns {HTMLElement} Tidtabellsbehållare
      */
     createTimetableContainer(title, scheduleType, highlightStop) {
         const container = document.createElement("div");
@@ -81,7 +85,7 @@ class Renderer {
         container.setAttribute('role', 'region');
         container.setAttribute('aria-label', `${title} - ${scheduleType}`);
 
-        // Create title section
+        // Skapa titelsektion
         const titleSection = document.createElement("div");
         titleSection.className = "title-section";
 
@@ -90,12 +94,12 @@ class Renderer {
         titleElement.setAttribute('role', 'heading');
         titleElement.setAttribute('aria-level', '1');
         
-        // Add text
+        // Lägg till text
         const titleText = document.createElement("span");
         titleText.textContent = title;
         titleElement.appendChild(titleText);
         
-        // Add boat icon
+        // Lägg till båtikon
         const icon = document.createElement("img");
         icon.src = "icons/boat.png";
         icon.alt = "Båtikon";
@@ -106,7 +110,7 @@ class Renderer {
         
         titleSection.appendChild(titleElement);
         
-        // Add speech button if enabled
+        // Lägg till talknapp om aktiverad
         if (this.config.showSpeechSynthesis) {
             const speechButton = this.createSpeechButton(title, highlightStop);
             titleSection.appendChild(speechButton);
@@ -114,7 +118,7 @@ class Renderer {
         
         container.appendChild(titleSection);
 
-        // Add departures header
+        // Lägg till avgångsrubrik
         const departuresHeader = document.createElement("div");
         departuresHeader.className = "departures-header";
         departuresHeader.textContent = "Avgångar";
@@ -126,10 +130,10 @@ class Renderer {
     }
     
     /**
-     * Creates a speech synthesis button for the timetable
-     * @param {string} title Timetable title
-     * @param {string} highlightStop Stop that is highlighted
-     * @returns {HTMLElement} Speech button
+     * Skapar en talsyntes-knapp för tidtabellen
+     * @param {string} title Tidtabellens titel
+     * @param {string} highlightStop Hållplats som ska markeras
+     * @returns {HTMLElement} Talknapp
      */
     createSpeechButton(title, highlightStop) {
         const speechButton = document.createElement("button");
@@ -140,7 +144,7 @@ class Renderer {
         speechButton.setAttribute('data-stop', highlightStop);
         speechButton.setAttribute('data-title', title);
         
-        // Använd en data-attribut för att spåra aktiv status
+        // Använd ett data-attribut för att spåra aktiv status
         speechButton.setAttribute('data-speaking', 'false');
         
         speechButton.addEventListener('click', () => {
@@ -151,12 +155,13 @@ class Renderer {
     }
     
     /**
-     * Speaks the next departure using the Web Speech API
-     * @param {HTMLElement} button The speech button that was clicked
+     * Läser upp nästa avgång med Web Speech API
+     * @param {HTMLElement} button Talknappen som klickades
      */
     speakNextDeparture(button) {
         // Om talsyntes redan pågår, avbryt den
-        if (window.speechSynthesis.speaking && button.getAttribute('data-speaking') === 'true') {
+        if (window.speechSynthesis && window.speechSynthesis.speaking && 
+            button.getAttribute('data-speaking') === 'true') {
             window.speechSynthesis.cancel();
             button.setAttribute('data-speaking', 'false');
             button.classList.remove('speaking');
@@ -188,17 +193,29 @@ class Renderer {
         const isTomorrow = nextDeparture.classList.contains('tomorrow-time');
         const time = nextDeparture.textContent.trim();
         
+        // Kontrollera om avgången är "Endast avstigning"
+        const isDisembarkOnly = nextDeparture.classList.contains('disembark-only');
+        
         // Förbered meddelandet
         let message;
         
         if (isTomorrow) {
             message = `Nästa avgång från ${stop} är imorgon klockan ${time}.`;
+            if (isDisembarkOnly) {
+                message += " Observera, endast avstigning.";
+            }
         } else {
             // Kontrollera om det är en snar avgång (gul markering)
             if (nextDeparture.classList.contains('highlight-yellow')) {
                 message = `Snar avgång från ${stop} klockan ${time}.`;
+                if (isDisembarkOnly) {
+                    message += " Observera, endast avstigning.";
+                }
             } else {
                 message = `Nästa avgång från ${stop} är klockan ${time}.`;
+                if (isDisembarkOnly) {
+                    message += " Observera, endast avstigning.";
+                }
             }
         }
         
@@ -207,9 +224,9 @@ class Renderer {
     }
     
     /**
-     * Uses the Web Speech API to speak a message
-     * @param {string} message Message to speak
-     * @param {HTMLElement} button The button that triggered the speech (for visual feedback)
+     * Använder Web Speech API för att läsa upp ett meddelande
+     * @param {string} message Meddelande att läsa upp
+     * @param {HTMLElement} button Knappen som utlöste uppläsningen (för visuell feedback)
      */
     speakMessage(message, button = null) {
         // Kontrollera om talsyntes stöds av webbläsaren
@@ -218,48 +235,57 @@ class Renderer {
             return;
         }
         
-        // Avbryt eventuell pågående uppläsning
-        window.speechSynthesis.cancel();
-        
-        // Skapa ett nytt Speech Synthesis Utterance-objekt
-        const utterance = new SpeechSynthesisUtterance(message);
-        
-        // Försök använda svenska som språk
-        utterance.lang = 'sv-SE';
-        utterance.rate = 0.9; // Lite långsammare för tydlighet
-        utterance.pitch = 1;
-        
-        // Visuell feedback när uppläsningen börjar
-        if (button) {
-            button.classList.add('speaking');
-            button.setAttribute('data-speaking', 'true');
-            button.setAttribute('aria-label', 'Avbryt uppläsning');
+        try {
+            // Avbryt eventuell pågående uppläsning
+            window.speechSynthesis.cancel();
             
-            // Återställ knappens utseende när uppläsningen är klar
-            utterance.onend = () => {
+            // Skapa ett nytt Speech Synthesis Utterance-objekt
+            const utterance = new SpeechSynthesisUtterance(message);
+            
+            // Försök använda svenska som språk
+            utterance.lang = 'sv-SE';
+            utterance.rate = 0.9; // Lite långsammare för tydlighet
+            utterance.pitch = 1;
+            
+            // Visuell feedback när uppläsningen börjar
+            if (button) {
+                button.classList.add('speaking');
+                button.setAttribute('data-speaking', 'true');
+                button.setAttribute('aria-label', 'Avbryt uppläsning');
+                
+                // Återställ knappens utseende när uppläsningen är klar
+                utterance.onend = () => {
+                    button.classList.remove('speaking');
+                    button.setAttribute('data-speaking', 'false');
+                    button.setAttribute('aria-label', `Läs upp nästa avgång från ${button.getAttribute('data-stop')}`);
+                };
+                
+                // Hantera avbruten uppläsning
+                utterance.onpause = utterance.onend;
+                utterance.onerror = utterance.onend;
+            }
+            
+            // Starta uppläsningen
+            window.speechSynthesis.speak(utterance);
+        } catch (error) {
+            console.warn('Fel vid användning av talsyntes:', error);
+            if (button) {
                 button.classList.remove('speaking');
                 button.setAttribute('data-speaking', 'false');
-                button.setAttribute('aria-label', `Läs upp nästa avgång från ${button.getAttribute('data-stop')}`);
-            };
-            
-            // Hantera avbruten uppläsning
-            utterance.onpause = utterance.onend;
-            utterance.onerror = utterance.onend;
+            }
         }
-        
-        // Starta uppläsningen
-        window.speechSynthesis.speak(utterance);
     }
 
     /**
-     * Creates a row for departure times
-     * @param {string} stop Stop name
-     * @param {Array} times Array of departure times with format {time: "HH:MM", isToday: boolean}
-     * @param {string} currentTime Current time in HH:MM format
-     * @param {string} highlightStop Stop to highlight
-     * @returns {HTMLElement} Row element
+     * Skapar en rad för avgångstider
+     * @param {string} stop Hållplatsnamn
+     * @param {Array} times Array med avgångstider i format {time: "HH:MM", isToday: boolean}
+     * @param {string} currentTime Aktuell tid i HH:MM-format
+     * @param {string} highlightStop Hållplats att markera
+     * @param {Object} disembarkOnlyInfo Objekt med dagens och morgondagens "Endast avstigning" tider
+     * @returns {HTMLElement} Rad-element
      */
-    createDepartureRow(stop, times, currentTime, highlightStop) {
+    createDepartureRow(stop, times, currentTime, highlightStop, disembarkOnlyInfo = null) {
         const row = document.createElement("div");
         row.className = "row";
         row.setAttribute('role', 'row');
@@ -268,19 +294,19 @@ class Renderer {
             row.classList.add("highlight-stop");
         }
 
-        // Create stop name element
+        // Skapa hållplatsnamnselement
         const stopElement = document.createElement("div");
         stopElement.className = "stop";
         stopElement.textContent = stop;
         stopElement.setAttribute('role', 'cell');
         row.appendChild(stopElement);
 
-        // Create times container
+        // Skapa tidsbehållare
         const timesElement = document.createElement("div");
         timesElement.className = "times";
         timesElement.setAttribute('role', 'row');
 
-        // Find next departure for highlighted stop
+        // Hitta nästa avgång för markerad hållplats
         const timeHandler = new TimeHandler();
         const currentTimeMinutes = timeHandler.timeToMinutes(currentTime);
         
@@ -299,16 +325,49 @@ class Renderer {
             }
         }
 
-        // Add individual time elements
+        // Förbereda disembarkOnly-objekt
+        const todayDisembarkOnly = disembarkOnlyInfo?.today || null;
+        const tomorrowDisembarkOnly = disembarkOnlyInfo?.tomorrow || null;
+
+        // Lägg till individuella tidselement
         times.forEach(timeObj => {
             const timeElement = document.createElement("span");
             timeElement.textContent = timeObj.time;
             timeElement.setAttribute('role', 'cell');
             timeElement.setAttribute('tabindex', '0');
             
+            // Bestäm vilket disembarkOnly-objekt att använda baserat på om tiden är för idag eller morgondagen
+            const disembarkOnlyTimes = timeObj.isToday ? todayDisembarkOnly : tomorrowDisembarkOnly;
+            
+            // Kontrollera om denna tid är "Endast avstigning"
+            const isDisembarkOnly = this.isDisembarkOnlyTime(stop, timeObj.time, disembarkOnlyTimes);
+            
+            if (isDisembarkOnly) {
+                // Lägg till markering för "Endast avstigning" (om den ska visas)
+                if (this.config.showDisembarkOnly) {
+                    timeElement.classList.add("disembark-only");
+                    // Lägg till asterisk eller annan indikator för "Endast avstigning"
+                    const indicator = document.createElement("span");
+                    indicator.className = "disembark-indicator";
+                    indicator.textContent = "*";
+                    indicator.setAttribute('aria-hidden', 'true');
+                    timeElement.appendChild(indicator);
+                }
+                
+                // Lägg alltid till en tooltip och ARIA-attribut för tillgänglighet
+                timeElement.setAttribute('title', 'Endast avstigning');
+                timeElement.setAttribute('aria-label', `${timeObj.time} - Endast avstigning`);
+            }
+            
             if (!timeObj.isToday) {
                 timeElement.classList.add("tomorrow-time");
-                timeElement.setAttribute('aria-label', `I morgon ${timeObj.time}`);
+                
+                // Uppdatera ARIA-label baserat på om det är "Endast avstigning" eller inte
+                if (isDisembarkOnly) {
+                    timeElement.setAttribute('aria-label', `I morgon ${timeObj.time} - Endast avstigning`);
+                } else {
+                    timeElement.setAttribute('aria-label', `I morgon ${timeObj.time}`);
+                }
             }
 
             // Markera nästa avgång med grön eller gul ram
@@ -334,7 +393,12 @@ class Renderer {
                     timeDescription = totalMinutes <= 10 ? "Snar avgång" : "Nästa avgång";
                 }
                 
-                timeElement.setAttribute('aria-label', `${timeDescription} ${timeObj.time}`);
+                // Uppdatera ARIA-label baserat på om det är "Endast avstigning" eller inte
+                if (isDisembarkOnly) {
+                    timeElement.setAttribute('aria-label', `${timeDescription} ${timeObj.time} - Endast avstigning`);
+                } else {
+                    timeElement.setAttribute('aria-label', `${timeDescription} ${timeObj.time}`);
+                }
             }
 
             timesElement.appendChild(timeElement);
@@ -345,14 +409,52 @@ class Renderer {
     }
 
     /**
-     * Creates a complete timetable
-     * @param {Object} schedule Schedule data
-     * @param {string} title Timetable title
-     * @param {string} scheduleDisplayName Display name for schedule type
-     * @param {string} customHighlightStop Optional stop to highlight
-     * @returns {HTMLElement} Complete timetable element
+     * Kontrollerar om en specifik tid för en specifik hållplats är "Endast avstigning"
+     * @param {string} stop Hållplatsnamn
+     * @param {string} time Tid i format "HH:MM"
+     * @param {Object} disembarkOnlyTimes Objekt med "Endast avstigning" tider
+     * @returns {boolean} True om tiden är "Endast avstigning"
      */
-    createTimetable(schedule, title, scheduleDisplayName, customHighlightStop = null) {
+    isDisembarkOnlyTime(stop, time, disembarkOnlyTimes) {
+        if (!disembarkOnlyTimes) return false;
+        
+        // Kontrollera om hållplatsen finns i disembarkOnlyTimes
+        if (disembarkOnlyTimes[stop]) {
+            return disembarkOnlyTimes[stop].includes(time);
+        }
+        
+        return false;
+    }
+
+    /**
+     * Kontrollerar om det finns några "Endast avstigning"-tider i ett objekt
+     * @param {Object} disembarkOnlyObj Objekt med "Endast avstigning" tider
+     * @returns {boolean} True om det finns minst en "Endast avstigning"-tid
+     */
+    hasDisembarkOnlyTimes(disembarkOnlyObj) {
+        if (!disembarkOnlyObj) return false;
+        
+        // Kontrollera om objektet har några hållplatser med tider
+        for (const stop in disembarkOnlyObj) {
+            if (Array.isArray(disembarkOnlyObj[stop]) && disembarkOnlyObj[stop].length > 0) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Skapar en komplett tidtabell
+     * @param {Object} schedule Schemalagda data
+     * @param {string} title Tidtabellstitel
+     * @param {string} scheduleDisplayName Visningsnamn för schematypen
+     * @param {string} customHighlightStop Valfri hållplats att markera
+     * @param {Object} disembarkOnlyToday Objekt med dagens "Endast avstigning" tider
+     * @param {Object} disembarkOnlyTomorrow Objekt med morgondagens "Endast avstigning" tider
+     * @returns {HTMLElement} Komplett tidtabellselement
+     */
+    createTimetable(schedule, title, scheduleDisplayName, customHighlightStop = null, disembarkOnlyToday = null, disembarkOnlyTomorrow = null) {
         const highlightStopToUse = customHighlightStop || this.config.highlightStop;
         
         const container = this.createTimetableContainer(title, scheduleDisplayName, highlightStopToUse);
@@ -361,12 +463,32 @@ class Renderer {
         const currentTime = now.getHours().toString().padStart(2, '0') + ":" + 
                           now.getMinutes().toString().padStart(2, '0');
 
+        // Kombinera dagens och morgondagens "Endast avstigning"-tider i ett objekt
+        const disembarkOnlyInfo = {
+            today: disembarkOnlyToday,
+            tomorrow: disembarkOnlyTomorrow
+        };
+
         try {
-            // Create rows for each stop
+            // Skapa rader för varje hållplats
             Object.entries(schedule.departures || {}).forEach(([stop, times]) => {
-                const row = this.createDepartureRow(stop, times, currentTime, highlightStopToUse);
+                const row = this.createDepartureRow(stop, times, currentTime, highlightStopToUse, disembarkOnlyInfo);
                 container.appendChild(row);
             });
+            
+            // Kontrollera om det faktiskt finns några "Endast avstigning"-tider att visa
+            const hasAnyDisembarkOnlyTimes = 
+                (this.hasDisembarkOnlyTimes(disembarkOnlyToday) || 
+                 this.hasDisembarkOnlyTimes(disembarkOnlyTomorrow)) && 
+                this.config.showDisembarkOnly;
+            
+            // Lägg bara till fotnot om det faktiskt finns "Endast avstigning"-tider och showDisembarkOnly är aktiverat
+            if (hasAnyDisembarkOnlyTimes) {
+                const footnote = document.createElement("div");
+                footnote.className = "disembark-footnote";
+                footnote.innerHTML = "<span>*</span> = Endast avstigning";
+                container.appendChild(footnote);
+            }
         } catch (error) {
             console.error('Error creating timetable rows:', error);
             this.createNotification(container, 'Kunde inte visa alla avgångar', 'error');
@@ -376,58 +498,108 @@ class Renderer {
     }
 
     /**
-     * Checks if an element has overflow content
-     * @param {HTMLElement} element Element to check
+     * Kontrollerar om ett element har overflow-innehåll
+     * @param {HTMLElement} element Element att kontrollera
      */
     checkOverflow(element) {
-        if (element.scrollHeight > element.clientHeight) {
-            element.classList.add('overflow');
-            const currentLabel = element.getAttribute('aria-label') || '';
-            if (!currentLabel.includes('Scroll för mer innehåll')) {
-                element.setAttribute('aria-label', `${currentLabel} - Scroll för mer innehåll`);
+        if (!element) return;
+        
+        try {
+            if (element.scrollHeight > element.clientHeight) {
+                element.classList.add('overflow');
+                const currentLabel = element.getAttribute('aria-label') || '';
+                if (!currentLabel.includes('Scroll för mer innehåll')) {
+                    element.setAttribute('aria-label', `${currentLabel} - Scroll för mer innehåll`);
+                }
+            } else {
+                element.classList.remove('overflow');
+                const currentLabel = element.getAttribute('aria-label') || '';
+                element.setAttribute('aria-label', currentLabel.replace(' - Scroll för mer innehåll', ''));
             }
-        } else {
-            element.classList.remove('overflow');
-            const currentLabel = element.getAttribute('aria-label') || '';
-            element.setAttribute('aria-label', currentLabel.replace(' - Scroll för mer innehåll', ''));
+        } catch (error) {
+            console.warn('Fel vid kontroll av overflow:', error);
         }
     }
 
     /**
-     * Sets up overflow observers for dynamic content
-     * @param {HTMLElement} wrapper Root element to observe
+     * Sätter upp overflow-observatörer för dynamiskt innehåll
+     * @param {HTMLElement} wrapper Rotelementet att observera
      */
     setupOverflowObservers(wrapper) {
-        // Delay to ensure content is rendered
+        // Säkerhetskontroll
+        if (!wrapper) {
+            console.warn('setupOverflowObservers: Inget wrapper-element tillhandahållet');
+            return;
+        }
+        
+        // Använd setTimeout för att undvika MutationObserver-problem
         setTimeout(() => {
-            const timetables = wrapper.querySelectorAll('.timetable');
-            timetables.forEach(table => this.checkOverflow(table));
-            
-            // Create observer for dynamic changes
-            const observer = new ResizeObserver(entries => {
-                entries.forEach(entry => {
-                    if (entry.target.classList.contains('timetable')) {
-                        this.checkOverflow(entry.target);
+            try {
+                // Kontrollera att wrapper fortfarande finns i DOM
+                if (!document.body.contains(wrapper)) {
+                    console.warn('Wrapper finns inte längre i DOM');
+                    return;
+                }
+                
+                // Hitta och kontrollera tidtabeller
+                const timetables = wrapper.querySelectorAll('.timetable');
+                if (timetables.length === 0) {
+                    console.warn('Inga tidtabeller hittades i wrapper');
+                    return;
+                }
+                
+                // Kontrollera överflöde för varje tidtabell
+                timetables.forEach(table => {
+                    if (table) {
+                        this.checkOverflow(table);
                     }
                 });
-            });
-            
-            // Observe each timetable
-            timetables.forEach(table => observer.observe(table));
-            
-            // Clean up observer when wrapper is removed
-            const cleanup = new MutationObserver(mutations => {
-                mutations.forEach(mutation => {
-                    mutation.removedNodes.forEach(node => {
-                        if (node === wrapper) {
-                            observer.disconnect();
-                            cleanup.disconnect();
+                
+                // Skapa en ResizeObserver för att upptäcka storleksändringar
+                try {
+                    // ResizeObserver-stöd kontroll
+                    if (typeof ResizeObserver === 'undefined') {
+                        console.warn('ResizeObserver stöds inte i denna webbläsare');
+                        return;
+                    }
+                    
+                    const resizeObserver = new ResizeObserver(entries => {
+                        entries.forEach(entry => {
+                            try {
+                                if (entry.target && entry.target.classList && 
+                                    entry.target.classList.contains('timetable')) {
+                                    this.checkOverflow(entry.target);
+                                }
+                            } catch (error) {
+                                console.warn('Fel i ResizeObserver-callback:', error);
+                            }
+                        });
+                    });
+                    
+                    // Observera varje tidtabell
+                    timetables.forEach(table => {
+                        if (table) {
+                            resizeObserver.observe(table);
                         }
                     });
-                });
-            });
-            
-            cleanup.observe(wrapper.parentNode, { childList: true });
-        }, 0);
+                    
+                    // Lösning: Använd ett attribut på wrapper för att lagra referensen 
+                    // till observatören istället för att använda MutationObserver
+                    wrapper.setAttribute('data-has-observers', 'true');
+                    wrapper._resizeObserver = resizeObserver;
+                    
+                    // Städa upp på window unload istället för MutationObserver
+                    window.addEventListener('unload', () => {
+                        if (resizeObserver) {
+                            resizeObserver.disconnect();
+                        }
+                    });
+                } catch (error) {
+                    console.warn('Fel vid skapande av ResizeObserver:', error);
+                }
+            } catch (error) {
+                console.warn('Fel vid uppsättning av overflow observers:', error);
+            }
+        }, 200); // Längre timeout för att säkerställa att DOM är helt renderad
     }
 }

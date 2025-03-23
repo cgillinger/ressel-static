@@ -96,16 +96,9 @@
   },
   "disembark_only": {
     "from_city": {
-      "morning": {
-        "Barnängsbryggan": ["12:14"],
-        "Lumabryggan": ["12:18"],
-        "Henriksdalsbryggan": ["12:22"]
-      },
-      "afternoon": {
-        "Barnängsbryggan": ["18:44"],
-        "Lumabryggan": ["18:48"],
-        "Henriksdalsbryggan": ["18:52"]
-      }
+      "Barnängsbryggan": ["12:14", "18:44"],
+      "Lumabryggan": ["12:18", "18:48"],
+      "Henriksdalsbryggan": ["12:22", "18:52"]
     }
   }
 }

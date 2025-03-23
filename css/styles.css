@@ -1,20 +1,21 @@
 /**
  * Sjöstadsfärjetrafiken Web Application - Styles
  * 
- * Global styling for the Sjöstadsfärjetrafiken application.
- * Includes dark theme, responsive design, and accessibility features.
+ * Global styling för Sjöstadsfärjetrafiken-applikationen.
+ * Inkluderar mörkt tema, responsiv design och tillgänglighetsfunktioner.
  * 
- * Version History:
- * 2.5.0 (2025-03-25) - Added styling for reset button in settings panel
- * 2.4.0 (2025-03-22) - Added styling for speech synthesis feature
- * 2.3.0 (2025-03-21) - Added settings panel, hamburger menu and improved mobile support
- * 2.2.1 (2025-03-20) - Fixed highlight borders alignment issues
- * 2.2.0 (2025-03-19) - Fixed highlighting borders issue, added toggle controls
- * 2.0.0 (2025-01-16) - Converted to static web styles, improved accessibility
- * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
+ * Versionshistorik:
+ * 3.0.0 (2025-03-26) - Tillagd styling för "Endast avstigning" indikator
+ * 2.5.0 (2025-03-25) - Tillagd styling för återställningsknapp i inställningspanelen
+ * 2.4.0 (2025-03-22) - Tillagd styling för talsyntesfunktion
+ * 2.3.0 (2025-03-21) - Tillagd inställningspanel, hamburger-meny och förbättrat mobilstöd
+ * 2.2.1 (2025-03-20) - Fixat problemet med avstånd i highlight-ramar
+ * 2.2.0 (2025-03-19) - Fixat problemet med markeringsramar, tillagda växlingskontroller
+ * 2.0.0 (2025-01-16) - Konverterad till statisk webbstyling, förbättrad tillgänglighet
+ * 1.0.0 (2024-01-11) - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 2.5.0
+ * @version 3.0.0
  * @license MIT
  */
 
@@ -35,6 +36,7 @@
     --color-speech-button-active: rgba(0, 255, 0, 0.45);
     --color-reset-button: rgba(255, 0, 0, 0.15);
     --color-reset-button-hover: rgba(255, 0, 0, 0.25);
+    --color-disembark-indicator: rgba(255, 255, 0, 0.8);
     
     /* Typography */
     --font-primary: "Roboto Condensed", system-ui, sans-serif;
@@ -518,6 +520,36 @@ body {
 .MMM-Resseltrafiken .times span.tomorrow-time {
     font-style: italic;
     color: var(--color-text-bright) !important;
+}
+
+/* "Endast avstigning" Time */
+.MMM-Resseltrafiken .times span.disembark-only {
+    position: relative;
+}
+
+/* "Endast avstigning" Indicator (asterisk) */
+.MMM-Resseltrafiken .times span.disembark-only .disembark-indicator {
+    position: absolute;
+    top: -5px;
+    right: -2px;
+    font-size: 14px;
+    color: var(--color-disembark-indicator);
+    font-weight: bold;
+}
+
+/* Disembark-only Footnote */
+.MMM-Resseltrafiken .disembark-footnote {
+    font-size: var(--font-size-small);
+    color: var(--color-text-bright);
+    margin-top: 10px;
+    margin-bottom: 5px;
+    text-align: right;
+    font-style: italic;
+}
+
+.MMM-Resseltrafiken .disembark-footnote span {
+    color: var(--color-disembark-indicator);
+    font-weight: bold;
 }
 
 /* Highlighted Stop Row */

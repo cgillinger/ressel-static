@@ -1,37 +1,38 @@
 /**
  * Resseltrafiken Web Application - Time Handling Module
  * 
- * Manages time-related calculations and schedule processing for the Resseltrafiken
- * timetable application. This module handles time conversions and departure sorting.
+ * Hanterar tidsrelaterade beräkningar och schemabearbetning för Resseltrafiken
+ * tidtabellsapplikation. Denna modul hanterar tidskonverteringar och sortering av avgångar.
  * 
- * Version History:
- * 5.1.0 (2025-03-25) - Removed past departures from display; next departure always first
- * 5.0.1 (2025-03-25) - Fixed deduplication logic to use uniqueId instead of time
- * 5.0.0 (2025-03-24) - Added day-based time identification for proper sorting and deduplication
- * 4.0.0 (2025-03-21) - Simplified for new JSON structure, removed schedule type detection
- * 3.0.0 (2025-03-20) - Added support for separate day types
- * 2.4.0 (2025-03-22) - Updated version numbering for consistency with other components
- * 2.1.0 (2025-03-18) - Updated to handle seasonal timetables and special holiday rules
- * 2.0.0 (2025-01-16) - Converted to static web module, improved holiday handling
- * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
+ * Versionshistorik:
+ * 6.0.0 (2025-03-26) - Förbättrad kompatibilitet med "Endast avstigning"-hantering
+ * 5.1.0 (2025-03-25) - Tagit bort passerade avgångar från visningen; nästa avgång alltid först
+ * 5.0.1 (2025-03-25) - Fixat avdupliceringlogik för att använda uniqueId istället för tid
+ * 5.0.0 (2025-03-24) - Lagt till dagsbaserad tidsidentifiering för korrekt sortering och avduplicering
+ * 4.0.0 (2025-03-21) - Förenklad för ny JSON-struktur, borttagen schematypidentifikation
+ * 3.0.0 (2025-03-20) - Lagt till stöd för separata dagtyper
+ * 2.4.0 (2025-03-22) - Uppdaterad versionsnumrering för konsekvens med andra komponenter
+ * 2.1.0 (2025-03-18) - Uppdaterad för att hantera säsongstidtabeller och speciella helgdagsregler
+ * 2.0.0 (2025-01-16) - Konverterad till statisk webbmodul, förbättrad helgdagshantering
+ * 1.0.0 (2024-01-11) - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.1.0
+ * @version 6.0.0
  * @license MIT
  */
 
 class TimeHandler {
     /**
-     * Initializes the TimeHandler
+     * Initierar TimeHandler
      */
     constructor() {
-        // No initialization needed in this version
+        // Ingen initialisering behövs i denna version
     }
 
     /**
-     * Converts time string (HH:MM) to minutes since midnight
-     * @param {string} timeStr Time in HH:MM format
-     * @returns {number} Minutes since midnight
+     * Konverterar tidssträng (HH:MM) till minuter sedan midnatt
+     * @param {string} timeStr Tid i HH:MM-format
+     * @returns {number} Minuter sedan midnatt
      */
     timeToMinutes(timeStr) {
         if (!timeStr) return 0;
@@ -40,9 +41,9 @@ class TimeHandler {
     }
 
     /**
-     * Converts minutes since midnight to time string (HH:MM)
-     * @param {number} minutes Minutes since midnight
-     * @returns {string} Time in HH:MM format
+     * Konverterar minuter sedan midnatt till tidssträng (HH:MM)
+     * @param {number} minutes Minuter sedan midnatt
+     * @returns {string} Tid i HH:MM-format
      */
     minutesToTime(minutes) {
         const hours = Math.floor(minutes / 60);
@@ -51,35 +52,35 @@ class TimeHandler {
     }
 
     /**
-     * Converts JavaScript day (0-6, where 0 is Sunday) to app day (1-7, where 1 is Monday)
-     * @param {number} jsDay JavaScript day (0-6)
-     * @returns {number} App day (1-7)
+     * Konverterar JavaScript dag (0-6, där 0 är söndag) till app-dag (1-7, där 1 är måndag)
+     * @param {number} jsDay JavaScript dag (0-6)
+     * @returns {number} App-dag (1-7)
      */
     convertJsDayToAppDay(jsDay) {
-        // Convert JavaScript's 0-6 (Sun-Sat) to 1-7 (Mon-Sun)
+        // Konvertera JavaScript's 0-6 (sön-lör) till 1-7 (mån-sön)
         return jsDay === 0 ? 7 : jsDay;
     }
 
     /**
-     * Gets the day number (1-7) for a given date
-     * @param {Date} date Date to get day number for
-     * @returns {number} Day number (1-7, where 1 is Monday)
+     * Hämtar dagnumret (1-7) för ett givet datum
+     * @param {Date} date Datum att hämta dagnummer för
+     * @returns {number} Dagnummer (1-7, där 1 är måndag)
      */
     getDayNumber(date) {
         return this.convertJsDayToAppDay(date.getDay());
     }
 
     /**
-     * Calculates the day difference between two day numbers, handling week wrapping
-     * @param {number} day1 First day (1-7)
-     * @param {number} day2 Second day (1-7)
-     * @returns {number} Days difference (positive if day2 is after day1, negative if before)
+     * Beräknar dagsskillnaden mellan två dagnummer, hanterar veckans övergång
+     * @param {number} day1 Första dagen (1-7)
+     * @param {number} day2 Andra dagen (1-7)
+     * @returns {number} Dagsskillnad (positiv om dag2 är efter dag1, negativ om före)
      */
     getDayDifference(day1, day2) {
-        // Handle direct difference
+        // Hantera direkt skillnad
         let diff = day2 - day1;
         
-        // Adjust for week wrapping
+        // Justera för veckans övergång
         if (diff > 3) {
             diff = diff - 7;
         } else if (diff < -3) {
@@ -90,27 +91,27 @@ class TimeHandler {
     }
 
     /**
-     * Creates a unique ID for a time-day combination
-     * @param {number} day Day number (1-7)
-     * @param {string} time Time in HH:MM format
-     * @returns {string} Unique ID
+     * Skapar ett unikt ID för en tid-dag-kombination
+     * @param {number} day Dagnummer (1-7)
+     * @param {string} time Tid i HH:MM-format
+     * @returns {string} Unikt ID
      */
     createUniqueTimeId(day, time) {
         return `${day}-${time}`;
     }
 
     /**
-     * Processes and sorts schedule times for display
-     * Now enhanced with day-based identification for proper sorting and deduplication
+     * Bearbetar och sorterar schematider för visning
+     * Nu förbättrad med dagsbaserad identifiering för korrekt sortering och avduplicering
      * 
-     * @param {Array<Object>} times Array of time objects with format: 
+     * @param {Array<Object>} times Array av tidsobjekt med format: 
      *                              {time: "HH:MM", isToday: boolean, day?: number, dayOffset?: number}
-     * @param {number} maxDepartures Maximum number of departures to return
-     * @returns {Array<Object>} Processed and sorted departure times
+     * @param {number} maxDepartures Maximalt antal avgångar att returnera
+     * @returns {Array<Object>} Bearbetade och sorterade avgångstider
      */
     processScheduleTimes(times, maxDepartures) {
         if (!Array.isArray(times)) {
-            console.error("Invalid times array:", times);
+            console.error("Ogiltig tidsarray:", times);
             return [];
         }
 
@@ -118,21 +119,21 @@ class TimeHandler {
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
         const currentDay = this.getDayNumber(now);
         
-        // Process times and create extended information with day awareness
+        // Bearbeta tider och skapa utökad information med dagsmedvetenhet
         let processedTimes = times.map(timeObj => {
             const minutesSinceMidnight = this.timeToMinutes(timeObj.time);
             
-            // Get the day and dayOffset - either from the object or calculate from isToday
+            // Hämta dagen och dayOffset - antingen från objektet eller beräkna från isToday
             let day = timeObj.day;
             let dayOffset = timeObj.dayOffset;
             
-            // If day is not provided but isToday is, calculate day and dayOffset
+            // Om day inte tillhandahålls men isToday är det, beräkna day och dayOffset
             if (day === undefined) {
                 if (timeObj.isToday) {
                     day = currentDay;
                     dayOffset = 0;
                 } else {
-                    // For tomorrow
+                    // För morgondagen
                     const tomorrow = new Date(now);
                     tomorrow.setDate(tomorrow.getDate() + 1);
                     day = this.getDayNumber(tomorrow);
@@ -140,22 +141,22 @@ class TimeHandler {
                 }
             }
             
-            // Calculate total minutes including day offset
+            // Beräkna totala minuter inklusive dagsförskjutning
             const totalMinutes = dayOffset * 24 * 60 + minutesSinceMidnight;
             
-            // Create a unique ID for this time-day combination
+            // Skapa ett unikt ID för denna tid-dag-kombination
             const uniqueId = this.createUniqueTimeId(day, timeObj.time);
             
-            // Calculate time difference from now
+            // Beräkna tidsskillnad från nu
             let diff;
             if (dayOffset === 0 && minutesSinceMidnight >= currentMinutes) {
-                // Today and time is in future
+                // Idag och tiden är i framtiden
                 diff = minutesSinceMidnight - currentMinutes;
             } else if (dayOffset === 0 && minutesSinceMidnight < currentMinutes) {
-                // Today but time is in past
+                // Idag men tiden är i det förflutna
                 diff = minutesSinceMidnight - currentMinutes;
             } else {
-                // Future day
+                // Framtida dag
                 diff = (dayOffset * 24 * 60) + minutesSinceMidnight - currentMinutes;
             }
             
@@ -171,38 +172,38 @@ class TimeHandler {
             };
         });
 
-        // Deduplicate times by selecting the instance that's closest to now
+        // Avduplicera tider genom att välja den instans som är närmast nu
         const uniqueTimes = [];
         const seenIds = new Set();
         
-        // Sort first by diff to ensure we get the closest instances
+        // Sortera först efter diff för att säkerställa att vi får de närmaste instanserna
         processedTimes.sort((a, b) => Math.abs(a.diff) - Math.abs(b.diff));
         
-        // Then deduplicate using uniqueId instead of just time
+        // Avduplicera sedan med uniqueId istället för bara tid
         for (const time of processedTimes) {
-            if (!seenIds.has(time.uniqueId)) {  // Fixed: Now using uniqueId instead of time
+            if (!seenIds.has(time.uniqueId)) {  // Fixat: Nu används uniqueId istället för time
                 uniqueTimes.push(time);
-                seenIds.add(time.uniqueId);     // Fixed: Now using uniqueId instead of time
+                seenIds.add(time.uniqueId);     // Fixat: Nu används uniqueId istället för time
             }
         }
         
-        // Resort by absolute time difference
+        // Sortera om efter absolut tidsskillnad
         uniqueTimes.sort((a, b) => a.diff - b.diff);
 
-        // Find the next departure
+        // Hitta nästa avgång
         const nextDepartureIndex = uniqueTimes.findIndex(t => !t.isPast);
         
         let selectedTimes;
         if (nextDepartureIndex === -1) {
-            // If all departures are past, show the last ones
+            // Om alla avgångar är passerade, visa de sista
             selectedTimes = uniqueTimes.slice(-maxDepartures);
         } else {
-            // FIXED: Get ONLY the next departure and future departures
-            // No past departures are included at all
+            // FIXAT: Hämta ENDAST nästa avgång och framtida avgångar
+            // Inga passerade avgångar inkluderas alls
             selectedTimes = uniqueTimes.slice(nextDepartureIndex, nextDepartureIndex + maxDepartures);
         }
 
-        // Return final format compatible with original API
+        // Returnera slutformat som är kompatibelt med ursprungligt API
         return selectedTimes.map(t => ({
             time: t.time,
             isToday: t.isToday

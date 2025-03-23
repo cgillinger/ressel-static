@@ -1,108 +1,138 @@
 /**
  * Sjöstadsfärjetrafiken Web Application - Main Application
  * 
- * This is the main entry point and controller for the Sjöstadsfärjetrafiken web application.
- * It coordinates the TimeHandler and Renderer modules, manages data loading and updates,
- * and handles the overall application lifecycle.
+ * Detta är huvudingångspunkten och styrmodulen för Sjöstadsfärjetrafiken webbapplikation.
+ * Den samordnar TimeHandler och Renderer-modulerna, hanterar datainläsning och uppdateringar,
+ * och hanterar applikationens övergripande livscykel.
  * 
- * Version History:
- * 5.1.1 (2025-03-25) - Added reset button and changed default to 7 departures
- * 5.1.0 (2025-03-25) - Removed past departures from display; next departure always first
- * 5.0.0 (2025-03-24) - Added day-based time identification for proper sorting and deduplication
- * 4.2.0 (2025-03-24) - Removed maximum departure limit to allow flexible display of all departures
- * 4.1.0 (2025-03-23) - Limited max departures to 7 to prevent display issues
- * 4.0.0 (2025-03-21) - Complete redesign with new JSON structure for day type handling
- * 3.0.0 (2025-03-20) - Added support for separate day types
- * 2.4.0 (2025-03-22) - Added speech synthesis functionality for accessibility
- * 2.3.1 (2025-03-21) - Fixed visibility of direction settings, replaced toggles with settings panel
- * 2.2.1 (2025-03-20) - Fixed toggle controls visibility logic
- * 2.2.0 (2025-03-19) - Added options to show/hide individual timetables
- * 2.1.0 (2025-03-18) - Added support for seasonal timetables
- * 2.0.0 (2025-01-16) - Converted to static web application
- * 1.0.0 (2024-01-11) - Original version based on MMM-Resseltrafiken
+ * Versionshistorik:
+ * 7.0.0 (2025-03-28) - Fixad dagsbaserad hantering av "Endast avstigning"-indikatorer
+ * 6.1.0 (2025-03-26) - Förbättrad automatisk uppdateringsmekanism för aktuella tider
+ * 6.0.0 (2025-03-26) - Refaktorerad för robust hantering av "Endast avstigning", förbättrad dokumentation
+ * 5.1.1 (2025-03-25) - Lagt till reset-knapp och ändrat standard till 7 avgångar
+ * 5.1.0 (2025-03-25) - Tagit bort passerade avgångar från visningen; nästa avgång alltid först
+ * 5.0.0 (2025-03-24) - Lagt till dagsbaserad tidsidentifiering för korrekt sortering och avduplicering
+ * 4.2.0 (2025-03-24) - Tagit bort maximalt avgångslimit för att tillåta flexibel visning av alla avgångar
+ * 4.1.0 (2025-03-23) - Begränsat max avgångar till 7 för att förhindra visningsproblem
+ * 4.0.0 (2025-03-21) - Fullständig omdesign med ny JSON-struktur för dagtypshantering
+ * 3.0.0 (2025-03-20) - Lagt till stöd för separata dagtyper
+ * 2.4.0 (2025-03-22) - Lagt till talsyntesfunktionalitet för tillgänglighet
+ * 2.3.1 (2025-03-21) - Fixat synlighet av riktningsinställningar, ersatt växlar med inställningspanel
+ * 2.2.1 (2025-03-20) - Fixat synlighetslogik för kontrollväxlar
+ * 2.2.0 (2025-03-19) - Lagt till alternativ för att visa/dölja individuella tidtabeller
+ * 2.1.0 (2025-03-18) - Lagt till stöd för säsongsbaserade tidtabeller
+ * 2.0.0 (2025-01-16) - Konverterad till statisk webbapplikation
+ * 1.0.0 (2024-01-11) - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.1.1
+ * @version 7.0.0
  * @license MIT
  */
 
 document.addEventListener('DOMContentLoaded', async function() {
     /**
-     * Application configuration object
+     * Applikationskonfigurationsobjekt
      * @type {Object}
      */
     const config = {
-        updateInterval: 60000,           // Update interval in milliseconds
-        showBothDirections: true,        // Show both outbound and return trips
-        showSjostadstrafiken: true,      // Show Sjöstadstrafiken timetable
-        showEmelietrafiken: true,        // Show Emelietrafiken (M/S Emelie) timetable
-        showSpeechSynthesis: true,       // Show speech synthesis buttons for accessibility
-        highlightStop: "Lumabryggan",    // Stop to highlight in the UI
-        cityHighlightStop: "Lumabryggan", // Stop to highlight for city line (to city)
-        cityReturnStop: "Nybroplan",     // Return stop to highlight for city direction
-        maxVisibleDepartures: 7,         // Default number of visible departures per stop (changed from 9 to 7)
-        dataPaths: {                     // Paths to config files
+        updateInterval: 60000,           // Uppdateringsintervall i millisekunder (1 minut)
+        dataRefreshInterval: 1800000,    // Uppdatera data från server var 30:e minut
+        midnightCheckInterval: 60000,    // Kontrollera midnatt var minut
+        showBothDirections: true,        // Visa både utgående och returresor
+        showSjostadstrafiken: true,      // Visa Sjöstadstrafiken tidtabell
+        showEmelietrafiken: true,        // Visa Emelietrafiken (M/S Emelie) tidtabell
+        showSpeechSynthesis: true,       // Visa talsyntes-knappar för tillgänglighet
+        showDisembarkOnly: true,         // Visa "Endast avstigning" indikator (aktivt som standard)
+        highlightStop: "Lumabryggan",    // Hållplats att markera i användargränssnittet
+        cityHighlightStop: "Lumabryggan", // Hållplats att markera för citylinjen (till city)
+        cityReturnStop: "Nybroplan",     // Returhållplats att markera för cityriktning
+        maxVisibleDepartures: 7,         // Standardantal synliga avgångar per hållplats (ändrat från 9 till 7)
+        dataPaths: {                     // Sökvägar till konfigurationsfiler
             sjoConfig: './data/ressel-sjo-config.json',
             cityConfig: './data/ressel-city-config.json'
         },
-        debug: false                     // Enable debug logging
+        debug: false                     // Aktivera debugloggning
     };
 
-    // Try to load config from URL parameters if they exist
+    // Förhindra caching av JSON-anrop
+    function addCacheBuster(url) {
+        const bustedUrl = new URL(url, window.location.origin);
+        bustedUrl.searchParams.set('_nocache', Date.now().toString());
+        return bustedUrl.toString();
+    }
+
+    // Försök ladda konfiguration från URL-parametrar om de finns
     loadConfigFromURL();
     
-    // Try to load config from localStorage if they exist
+    // Försök ladda konfiguration från localStorage om de finns
     loadConfigFromLocalStorage();
 
     document.documentElement.style.setProperty('--visible-departures', config.maxVisibleDepartures);
 
-    // Store loaded timetable data for different days
+    // Lagra laddad tidtabellsdata för olika dagar
     let timetableData = {
         today: {
             sjo: null,
-            city: null
+            city: null,
+            disembarkOnly: {
+                toCity: null,
+                fromCity: null
+            }
         },
         tomorrow: {
             sjo: null,
-            city: null
+            city: null,
+            disembarkOnly: {
+                toCity: null,
+                fromCity: null
+            }
         },
         config: {
             sjo: null,
             city: null
-        }
+        },
+        lastUpdate: null, // Tidpunkt för senaste uppdatering från server
+        lastRefresh: null // Tidpunkt för senaste uppdatering av visning
+    };
+
+    // Håll koll på timer-IDs för att kunna avbryta och starta om timers
+    let timers = {
+        displayUpdate: null,    // För 1-minuts uppdatering av visningen
+        dataRefresh: null,      // För 30-minuters uppdatering av data
+        midnightCheck: null     // För kontroll av dagsbyte vid midnatt
     };
 
     const timeHandler = new TimeHandler();
     const renderer = new Renderer(config);
     
-    // Keep a reference to the settings panel
+    // Behåll en referens till inställningspanelen
     let settingsPanel = null;
 
     /**
-     * Converts JavaScript day (0-6, where 0 is Sunday) to app day (1-7, where 1 is Monday)
-     * @param {number} jsDay JavaScript day (0-6)
-     * @returns {number} App day (1-7)
+     * Konverterar JavaScript-dag (0-6, där 0 är söndag) till appdagar (1-7, där 1 är måndag)
+     * @param {number} jsDay JavaScript-dag (0-6)
+     * @returns {number} Appdag (1-7)
      */
     function convertJsDayToAppDay(jsDay) {
-        // Convert JavaScript's 0-6 (Sun-Sat) to 1-7 (Mon-Sun)
+        // Konvertera JavaScript's 0-6 (sön-lör) till 1-7 (mån-sön)
         return jsDay === 0 ? 7 : jsDay;
     }
 
     /**
-     * Gets the day number (1-7) for a given date
-     * @param {Date} date Date to get day number for
-     * @returns {number} Day number (1-7, where 1 is Monday)
+     * Hämtar dagnumret (1-7) för ett givet datum
+     * @param {Date} date Datum att hämta dagnummer för
+     * @returns {number} Dagnummer (1-7, där 1 är måndag)
      */
     function getDayNumber(date) {
         return convertJsDayToAppDay(date.getDay());
     }
 
     /**
-     * Creates time objects with day information
-     * @param {Array<string>} times Array of time strings
-     * @param {Date} date Date for these times
-     * @param {Date} currentDate Current date for comparison
-     * @returns {Array<Object>} Enhanced time objects with day information
+     * Skapar tidsobjekt med dagsinformation
+     * @param {Array<string>} times Array med tidssträngrar
+     * @param {Date} date Datum för dessa tider
+     * @param {Date} currentDate Aktuellt datum för jämförelse
+     * @returns {Array<Object>} Förbättrade tidsobjekt med dagsinformation
      */
     function createEnhancedTimeObjects(times, date, currentDate) {
         if (!Array.isArray(times)) return [];
@@ -110,15 +140,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         const dayNumber = getDayNumber(date);
         let dayOffset = 0;
         
-        // Calculate day offset based on dates
+        // Beräkna dagsförskjutning baserat på datum
         if (date.toDateString() !== currentDate.toDateString()) {
-            // Simple calculation for tomorrow (most common case)
+            // Enkel beräkning för morgondagen (vanligaste fallet)
             if (date.getDate() === currentDate.getDate() + 1 &&
                 date.getMonth() === currentDate.getMonth() &&
                 date.getFullYear() === currentDate.getFullYear()) {
                 dayOffset = 1;
             } else {
-                // For other cases, calculate exact difference
+                // För andra fall, beräkna exakt skillnad
                 const diffTime = date.getTime() - currentDate.getTime();
                 dayOffset = Math.ceil(diffTime / (1000 * 3600 * 24));
             }
@@ -133,31 +163,31 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
-     * Resets all settings to default values and reloads the page
+     * Återställer alla inställningar till standardvärden och laddar om sidan
      */
     function resetSettings() {
         if (localStorage) {
             localStorage.removeItem('sjostadsfarjetrafiken_settings');
         }
         
-        // Clear URL parameters as well
+        // Rensa URL-parametrar också
         window.history.replaceState({}, document.title, window.location.pathname);
         
-        // Reload the page to apply default settings
+        // Ladda om sidan för att tillämpa standardinställningar
         window.location.reload();
     }
 
     /**
-     * Loads configuration from localStorage
-     * This preserves user preferences between sessions
+     * Laddar konfiguration från localStorage
+     * Detta bevarar användarpreferenser mellan sessioner
      */
     function loadConfigFromLocalStorage() {
         try {
-            // Only load if localStorage is available and we have saved settings
+            // Ladda bara om localStorage är tillgängligt och vi har sparade inställningar
             if (localStorage && localStorage.getItem('sjostadsfarjetrafiken_settings')) {
                 const savedSettings = JSON.parse(localStorage.getItem('sjostadsfarjetrafiken_settings'));
                 
-                // Apply saved settings if they exist, but don't override URL parameters
+                // Tillämpa sparade inställningar om de finns, men överskrid inte URL-parametrar
                 if (savedSettings.showSjostadstrafiken !== undefined && !urlHasParam('sjo')) {
                     config.showSjostadstrafiken = savedSettings.showSjostadstrafiken;
                 }
@@ -172,7 +202,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 
                 if (savedSettings.maxVisibleDepartures !== undefined && !urlHasParam('maxdep')) {
                     config.maxVisibleDepartures = savedSettings.maxVisibleDepartures;
-                    // Update CSS variable
+                    // Uppdatera CSS-variabel
                     document.documentElement.style.setProperty('--visible-departures', config.maxVisibleDepartures);
                 }
                 
@@ -191,16 +221,21 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (savedSettings.showSpeechSynthesis !== undefined && !urlHasParam('speech')) {
                     config.showSpeechSynthesis = savedSettings.showSpeechSynthesis;
                 }
+                
+                // Ny inställning för "Endast avstigning"
+                if (savedSettings.showDisembarkOnly !== undefined && !urlHasParam('disembark')) {
+                    config.showDisembarkOnly = savedSettings.showDisembarkOnly;
+                }
             }
         } catch (error) {
-            console.warn('Could not load settings from localStorage:', error);
+            console.warn('Kunde inte ladda inställningar från localStorage:', error);
         }
     }
     
     /**
-     * Checks if a URL parameter exists
-     * @param {string} paramName - Parameter name to check
-     * @returns {boolean} True if parameter exists in URL
+     * Kontrollerar om en URL-parameter existerar
+     * @param {string} paramName - Parameternamn att kontrollera
+     * @returns {boolean} Sant om parametern existerar i URL
      */
     function urlHasParam(paramName) {
         const urlParams = new URLSearchParams(window.location.search);
@@ -208,7 +243,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     /**
-     * Saves current configuration to localStorage
+     * Sparar aktuell konfiguration till localStorage
      */
     function saveConfigToLocalStorage() {
         try {
@@ -221,24 +256,25 @@ document.addEventListener('DOMContentLoaded', async function() {
                     highlightStop: config.highlightStop,
                     cityHighlightStop: config.cityHighlightStop,
                     cityReturnStop: config.cityReturnStop,
-                    showSpeechSynthesis: config.showSpeechSynthesis
+                    showSpeechSynthesis: config.showSpeechSynthesis,
+                    showDisembarkOnly: config.showDisembarkOnly // Inkludera ny inställning
                 };
                 
                 localStorage.setItem('sjostadsfarjetrafiken_settings', JSON.stringify(settings));
             }
         } catch (error) {
-            console.warn('Could not save settings to localStorage:', error);
+            console.warn('Kunde inte spara inställningar till localStorage:', error);
         }
     }
 
     /**
-     * Loads configuration from URL parameters
-     * This allows for easy customization of display without editing code
+     * Laddar konfiguration från URL-parametrar
+     * Detta möjliggör enkel anpassning av visning utan att redigera kod
      */
     function loadConfigFromURL() {
         const urlParams = new URLSearchParams(window.location.search);
         
-        // Check for show/hide parameters
+        // Kontrollera visa/dölj-parametrar
         if (urlParams.has('sjo')) {
             config.showSjostadstrafiken = urlParams.get('sjo') === '1' || 
                                           urlParams.get('sjo') === 'true';
@@ -249,7 +285,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                                         urlParams.get('emelie') === 'true';
         }
         
-        // Check for highlight stop parameters
+        // Kontrollera markera hållplatsparametrar
         if (urlParams.has('highlight')) {
             config.highlightStop = decodeURIComponent(urlParams.get('highlight'));
         }
@@ -262,44 +298,50 @@ document.addEventListener('DOMContentLoaded', async function() {
             config.cityReturnStop = decodeURIComponent(urlParams.get('returnstop'));
         }
         
-        // Check for direction setting
+        // Kontrollera riktningsinställning
         if (urlParams.has('bothdir')) {
             config.showBothDirections = urlParams.get('bothdir') === '1' || 
                                         urlParams.get('bothdir') === 'true';
         }
         
-        // Check for speech synthesis setting
+        // Kontrollera talsyntes-inställning
         if (urlParams.has('speech')) {
             config.showSpeechSynthesis = urlParams.get('speech') === '1' || 
                                         urlParams.get('speech') === 'true';
         }
         
-        // Check for maxVisibleDepartures
+        // Kontrollera "Endast avstigning"-inställning
+        if (urlParams.has('disembark')) {
+            config.showDisembarkOnly = urlParams.get('disembark') === '1' || 
+                                      urlParams.get('disembark') === 'true';
+        }
+        
+        // Kontrollera maxVisibleDepartures
         if (urlParams.has('maxdep')) {
             let maxDep = parseInt(urlParams.get('maxdep'), 10);
             if (!isNaN(maxDep) && maxDep > 0) {
                 config.maxVisibleDepartures = maxDep;
-                // Update CSS variable
+                // Uppdatera CSS-variabel
                 document.documentElement.style.setProperty('--visible-departures', config.maxVisibleDepartures);
             }
         } else {
-            // Set default based on screen size if not specified in URL
+            // Sätt standard baserat på skärmstorlek om ej specificerat i URL
             setDefaultDeparturesBasedOnScreenSize();
         }
     }
     
     /**
-     * Sets default number of visible departures based on screen size
+     * Sätter standardantal synliga avgångar baserat på skärmstorlek
      */
     function setDefaultDeparturesBasedOnScreenSize() {
-        // Only set default if not already set in localStorage
+        // Sätt standard bara om inte redan inställt i localStorage
         if (localStorage && !localStorage.getItem('sjostadsfarjetrafiken_settings')) {
-            // Check if mobile (<768px)
+            // Kontrollera om mobil (<768px)
             if (window.innerWidth < 768) {
                 config.maxVisibleDepartures = 4;
                 document.documentElement.style.setProperty('--visible-departures', 4);
             } else {
-                // Desktop default, changed from 9 to 7
+                // Desktop standard, ändrat från 9 till 7
                 config.maxVisibleDepartures = 7;
                 document.documentElement.style.setProperty('--visible-departures', 7);
             }
@@ -307,9 +349,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
-     * Logs debug messages if debug mode is enabled
-     * @param {string} message - Message to log
-     * @param {*} [data] - Optional data to log
+     * Loggar debugmeddelanden om debugläge är aktiverat
+     * @param {string} message - Meddelande att logga
+     * @param {*} [data] - Valfri data att logga
      */
     function debugLog(message, data = null) {
         if (config.debug) {
@@ -318,17 +360,110 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
-     * Loads configuration files for Sjöstadstrafiken and City Line
-     * @returns {Promise<Object>} The loaded configuration data
+     * Extraherar "Endast avstigning"-tider för en viss tidtabell
+     * Hanterar alla möjliga datastrukturer
+     * 
+     * @param {Object} scheduleData - Tidtabellsdata
+     * @param {string} direction - Riktning ('to_city' eller 'from_city')
+     * @returns {Object} Objekt med hållplatser som nycklar och arrayer av tider som värden
+     */
+    function extractDisembarkOnlyTimes(scheduleData, direction) {
+        if (!scheduleData || !scheduleData.disembark_only) {
+            return null;
+        }
+        
+        const disembarkOnlyTimes = {};
+        const dayType = scheduleData.metadata?.day_type || 'unknown';
+        
+        try {
+            // Hantera olika strukturer för disembark_only data
+            
+            // Struktur 1: Direkt under root med dagtyp (saturday, sunday, weekday)
+            if (scheduleData.disembark_only[dayType]) {
+                Object.entries(scheduleData.disembark_only[dayType]).forEach(([stop, times]) => {
+                    if (Array.isArray(times)) {
+                        disembarkOnlyTimes[stop] = times;
+                    }
+                });
+                return disembarkOnlyTimes;
+            }
+            
+            // Struktur 2: Direkt under disembark_only utan dagtyp (för vissa vinterfiler)
+            const directStopEntries = Object.entries(scheduleData.disembark_only).filter(
+                ([key, value]) => !['to_city', 'from_city', 'saturday', 'sunday', 'weekday'].includes(key)
+            );
+            
+            if (directStopEntries.length > 0) {
+                directStopEntries.forEach(([stop, times]) => {
+                    if (Array.isArray(times)) {
+                        disembarkOnlyTimes[stop] = times;
+                    }
+                });
+                
+                // Om det finns direktstop och vi har data, returnera det
+                if (Object.keys(disembarkOnlyTimes).length > 0) {
+                    return disembarkOnlyTimes;
+                }
+            }
+            
+            // Struktur 3: Med riktningsinformation (to_city, from_city)
+            if (scheduleData.disembark_only[direction]) {
+                // Struktur 3.1: Direkt under riktning
+                const directRichtungsStops = Object.entries(scheduleData.disembark_only[direction]).filter(
+                    ([key, value]) => !['morning', 'lunch', 'afternoon', 'stops'].includes(key) && Array.isArray(value)
+                );
+                
+                if (directRichtungsStops.length > 0) {
+                    directRichtungsStops.forEach(([stop, times]) => {
+                        disembarkOnlyTimes[stop] = times;
+                    });
+                    return disembarkOnlyTimes;
+                }
+                
+                // Struktur 3.2: Under riktning.stops
+                if (scheduleData.disembark_only[direction].stops) {
+                    return scheduleData.disembark_only[direction].stops;
+                }
+                
+                // Struktur 3.3: Separerade efter tidsperiod (morning, lunch, afternoon)
+                if (scheduleData.disembark_only[direction].morning || 
+                    scheduleData.disembark_only[direction].lunch || 
+                    scheduleData.disembark_only[direction].afternoon) {
+                    
+                    ['morning', 'lunch', 'afternoon'].forEach(period => {
+                        if (scheduleData.disembark_only[direction][period]) {
+                            Object.entries(scheduleData.disembark_only[direction][period]).forEach(([stop, times]) => {
+                                if (!disembarkOnlyTimes[stop]) disembarkOnlyTimes[stop] = [];
+                                disembarkOnlyTimes[stop] = [...disembarkOnlyTimes[stop], ...times];
+                            });
+                        }
+                    });
+                    
+                    return disembarkOnlyTimes;
+                }
+            }
+            
+            // Om inget matchat, returnera tomt objekt
+            return {};
+        } catch (error) {
+            console.error('Fel vid extraktion av "Endast avstigning"-tider:', error);
+            return {};
+        }
+    }
+
+    /**
+     * Laddar konfigurationsfiler för Sjöstadstrafiken och Citylinjen
+     * med cache-busting för att säkerställa senaste data
+     * @returns {Promise<Object>} Den laddade konfigurationsdatan
      */
     async function loadConfigData() {
         try {
-            debugLog('Loading configuration data...');
+            debugLog('Laddar konfigurationsdata...');
             
-            // Load both configuration files
+            // Ladda båda konfigurationsfilerna med cache-busting
             const [sjoConfigResponse, cityConfigResponse] = await Promise.all([
-                fetch(config.dataPaths.sjoConfig),
-                fetch(config.dataPaths.cityConfig)
+                fetch(addCacheBuster(config.dataPaths.sjoConfig)),
+                fetch(addCacheBuster(config.dataPaths.cityConfig))
             ]);
             
             if (!sjoConfigResponse.ok || !cityConfigResponse.ok) {
@@ -338,24 +473,24 @@ document.addEventListener('DOMContentLoaded', async function() {
             const sjoConfig = await sjoConfigResponse.json();
             const cityConfig = await cityConfigResponse.json();
 
-            debugLog('Configuration data loaded successfully');
+            debugLog('Konfigurationsdata laddades framgångsrikt');
             
             return {
                 sjo: sjoConfig,
                 city: cityConfig
             };
         } catch (error) {
-            console.error('Error loading configuration data:', error);
+            console.error('Fel vid laddning av konfigurationsdata:', error);
             handleError(error, 'Kunde inte ladda konfigurationsdata');
             return null;
         }
     }
 
     /**
-     * Determines which timetable files to use based on the current date and configuration
-     * @param {Object} configData - The configuration data
-     * @param {Date} date - The date to determine schedule for
-     * @returns {Object} An object with the paths to use for each service and day type
+     * Bestämmer vilka tidtabellsfiler som ska användas baserat på aktuellt datum och konfiguration
+     * @param {Object} configData - Konfigurationsdata
+     * @param {Date} date - Datum att bestämma schema för
+     * @returns {Object} Ett objekt med sökvägar att använda för varje tjänst och dagtyp
      */
     function determineTimetableFiles(configData, date) {
         const result = {
@@ -364,19 +499,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         };
 
         try {
-            // Determine day type - Note: Using DayOfWeek rather than isHoliday
+            // Bestäm dagtyp - OBS: Använder DayOfWeek istället för isHoliday
             const dayOfWeek = date.getDay();
             const isSaturday = dayOfWeek === 6;
             const isSunday = dayOfWeek === 0;
             const dayType = isSaturday ? "saturday" : (isSunday ? "sunday" : "weekday");
 
-            // Find appropriate Sjöstadstrafiken timetable file
+            // Hitta lämplig Sjöstadstrafiken-tidtabellfil
             for (const season of configData.sjo.season_mapping) {
                 const seasonStart = new Date(season.period.start);
                 const seasonEnd = new Date(season.period.end);
                 
                 if (date >= seasonStart && date <= seasonEnd) {
-                    // For Sjöstadstrafiken, handle weekend differently (only weekday/weekend)
+                    // För Sjöstadstrafiken, hantera helg annorlunda (bara weekday/weekend)
                     if (dayType === "saturday" || dayType === "sunday") {
                         result.sjo = season.files.weekend;
                     } else {
@@ -386,23 +521,23 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             }
 
-            // Find appropriate City Line timetable file
+            // Hitta lämplig Citylinje-tidtabellfil
             for (const season of configData.city.season_mapping) {
                 const seasonStart = new Date(season.period.start);
                 const seasonEnd = new Date(season.period.end);
                 
                 if (date >= seasonStart && date <= seasonEnd) {
-                    // Check if the current date is a holiday that should use weekend schedule
+                    // Kontrollera om aktuellt datum är en helgdag som ska använda helgschema
                     if (season.holiday_rules && season.holiday_rules.weekend_schedule) {
                         const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
                         if (season.holiday_rules.weekend_schedule.includes(dateStr)) {
-                            // If it's a holiday, use the Sunday schedule
+                            // Om det är en helgdag, använd söndagsschemat
                             result.city = season.files.sunday;
                             return result;
                         }
                     }
                     
-                    // Normal day type selection
+                    // Normal dagtypsval
                     result.city = season.files[dayType];
                     break;
                 }
@@ -410,30 +545,30 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             return result;
         } catch (error) {
-            console.error('Error determining timetable files:', error);
+            console.error('Fel vid bestämning av tidtabellsfiler:', error);
             return result;
         }
     }
 
     /**
-     * Loads and validates the timetable data for a specific day
-     * @param {Object} configData - The configuration data
-     * @param {Date} date - The date to load timetable for
-     * @returns {Promise<Object>} The parsed and validated timetable data
+     * Laddar och validerar tidtabellsdata för en specifik dag
+     * @param {Object} configData - Konfigurationsdata
+     * @param {Date} date - Datum att ladda tidtabell för
+     * @returns {Promise<Object>} Den parsade och validerade tidtabellsdatan
      */
     async function loadTimetableForDate(configData, date) {
         try {
             const timetableFiles = determineTimetableFiles(configData, date);
-            debugLog(`Loading timetable for ${date.toDateString()}`, timetableFiles);
+            debugLog(`Laddar tidtabell för ${date.toDateString()}`, timetableFiles);
             
             if (!timetableFiles.sjo || !timetableFiles.city) {
-                throw new Error('Could not determine timetable files for the specified date');
+                throw new Error('Kunde inte bestämma tidtabellsfiler för angivet datum');
             }
 
-            // Load both JSON files
+            // Ladda båda JSON-filerna med cache-busting för att säkerställa färsk data
             const [sjoResponse, cityResponse] = await Promise.all([
-                fetch(`./data/${timetableFiles.sjo}`),
-                fetch(`./data/${timetableFiles.city}`)
+                fetch(addCacheBuster(`./data/${timetableFiles.sjo}`)),
+                fetch(addCacheBuster(`./data/${timetableFiles.city}`))
             ]);
             
             if (!sjoResponse.ok || !cityResponse.ok) {
@@ -443,32 +578,52 @@ document.addEventListener('DOMContentLoaded', async function() {
             const sjoData = await sjoResponse.json();
             const cityData = await cityResponse.json();
 
-            // Add the day type to metadata for reference
+            // Lägg till dagstypen till metadata för referens
             sjoData._loadedForDate = date.toISOString();
             cityData._loadedForDate = date.toISOString();
 
-            debugLog(`Timetable data loaded for ${date.toDateString()}`);
+            // Extrahera "Endast avstigning"-informationen för både till och från city
+            const disembarkOnlyToCity = extractDisembarkOnlyTimes(cityData, 'to_city');
+            const disembarkOnlyFromCity = extractDisembarkOnlyTimes(cityData, 'from_city');
+
+            debugLog(`Tidtabellsdata laddad för ${date.toDateString()}`);
             
             return {
                 sjo: sjoData,
-                city: cityData
+                city: cityData,
+                disembarkOnly: {
+                    toCity: disembarkOnlyToCity || {},
+                    fromCity: disembarkOnlyFromCity || {}
+                }
             };
         } catch (error) {
-            console.error(`Error loading timetable for ${date.toDateString()}:`, error);
+            console.error(`Fel vid laddning av tidtabell för ${date.toDateString()}:`, error);
             return null;
         }
     }
 
     /**
-     * Updates the display with current timetable information
+     * Uppdaterar visningen med aktuell tidtabellsinformation
+     * @param {boolean} forceUpdate - Tvinga uppdatering även om timerna inte har ändrats
      */
-    function updateDisplay() {
+    function updateDisplay(forceUpdate = false) {
         const appElement = document.getElementById('app');
         if (!appElement) {
-            console.error('App container not found');
+            console.error('App-behållare hittades inte');
             return;
         }
 
+        const now = new Date();
+        
+        // Bara uppdatera om det har gått en minut sedan senaste uppdatering eller om forceUpdate är true
+        if (!forceUpdate && timetableData.lastRefresh && 
+            (now.getTime() - timetableData.lastRefresh.getTime() < 60000)) {
+            return;
+        }
+
+        // Uppdatera senaste uppdateringstidpunkt
+        timetableData.lastRefresh = now;
+        
         appElement.innerHTML = '';
         const wrapper = renderer.createWrapper();
 
@@ -478,38 +633,38 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         try {
-            debugLog('Updating display...');
+            debugLog('Uppdaterar visning...');
             
-            // Add timetable validity information
+            // Lägg till tidtabellsgiltighetsinfo
             addValidityInfo(wrapper);
             
-            // First render timetables
+            // Först rendera tidtabeller
             renderTimetables(wrapper);
             
-            // Then add settings button if not in embedded mode
+            // Lägg sedan till inställningsknapp om inte i inbäddat läge
             if (!isEmbedded()) {
                 addSettingsButton(wrapper);
             }
             
             renderer.setupOverflowObservers(wrapper);
             appElement.appendChild(wrapper);
-            debugLog('Display update complete');
+            debugLog('Visningsuppdatering komplett');
         } catch (error) {
             handleError(error, 'Fel vid uppdatering av display');
         }
     }
 
     /**
-     * Checks if the app is running in an embedded mode
-     * @returns {boolean} True if app is embedded
+     * Kontrollerar om appen körs i inbäddat läge
+     * @returns {boolean} Sant om appen är inbäddad
      */
     function isEmbedded() {
         return window.location.search.includes('embedded=true');
     }
 
     /**
-     * Adds settings button that opens the settings panel
-     * @param {HTMLElement} wrapper - The container element
+     * Lägger till inställningsknapp som öppnar inställningspanelen
+     * @param {HTMLElement} wrapper - Behållarelementet
      */
     function addSettingsButton(wrapper) {
         const settingsButton = document.createElement('div');
@@ -520,7 +675,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         const hamburgerIcon = document.createElement('span');
         hamburgerIcon.className = 'hamburger-icon';
-        hamburgerIcon.innerHTML = '&#9776;'; // Unicode for hamburger icon
+        hamburgerIcon.innerHTML = '&#9776;'; // Unicode för hamburger-ikon
         
         const buttonText = document.createElement('span');
         buttonText.className = 'settings-button-text';
@@ -544,23 +699,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     /**
-     * Opens the settings panel
+     * Öppnar inställningspanelen
      */
     function openSettingsPanel() {
-        // If panel already exists, remove it first
+        // Om panelen redan finns, ta bort den först
         if (settingsPanel) {
             settingsPanel.remove();
             settingsPanel = null;
             return;
         }
         
-        // Create the settings panel
+        // Skapa inställningspanelen
         settingsPanel = document.createElement('div');
         settingsPanel.className = 'settings-panel';
         settingsPanel.setAttribute('role', 'dialog');
         settingsPanel.setAttribute('aria-labelledby', 'settings-title');
         
-        // Panel header
+        // Panelrubrik
         const panelHeader = document.createElement('div');
         panelHeader.className = 'settings-header';
         
@@ -580,11 +735,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         panelHeader.appendChild(closeButton);
         settingsPanel.appendChild(panelHeader);
         
-        // Panel content
+        // Panelinnehåll
         const panelContent = document.createElement('div');
         panelContent.className = 'settings-content';
         
-        // Add Tidtabeller section
+        // Lägg till Tidtabellssektion
         panelContent.appendChild(createSettingsSection('Tidtabeller', [
             {
                 type: 'toggle',
@@ -593,7 +748,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 checked: config.showSjostadstrafiken,
                 onChange: (checked) => {
                     config.showSjostadstrafiken = checked;
-                    updateDisplay();
+                    updateDisplay(true);
                     updateURLParameter('sjo', checked ? '1' : '0');
                     saveConfigToLocalStorage();
                 }
@@ -606,20 +761,20 @@ document.addEventListener('DOMContentLoaded', async function() {
                 onChange: (checked) => {
                     config.showEmelietrafiken = checked;
                     
-                    // Toggle visibility of the directions section
+                    // Växla synlighet för riktningssektionen
                     const directionsSection = document.getElementById('emelie-directions-section');
                     if (directionsSection) {
                         directionsSection.style.display = checked ? 'block' : 'none';
                     }
                     
-                    updateDisplay();
+                    updateDisplay(true);
                     updateURLParameter('emelie', checked ? '1' : '0');
                     saveConfigToLocalStorage();
                 }
             }
         ]));
         
-        // Add M/S Emelie - Riktningar section
+        // Lägg till M/S Emelie - Riktningar-sektion
         const directionsSection = createSettingsSection('M/S Emelie - Riktningar', [
             {
                 type: 'toggle',
@@ -628,7 +783,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 checked: config.showBothDirections,
                 onChange: (checked) => {
                     config.showBothDirections = checked;
-                    updateDisplay();
+                    updateDisplay(true);
                     updateURLParameter('bothdir', checked ? '1' : '0');
                     saveConfigToLocalStorage();
                 }
@@ -638,7 +793,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         directionsSection.style.display = config.showEmelietrafiken ? 'block' : 'none';
         panelContent.appendChild(directionsSection);
         
-        // Add Visning section with expanded range of departures
+        // Lägg till Visning-sektion med utökat intervall för avgångar
         panelContent.appendChild(createSettingsSection('Visning', [
             {
                 type: 'select',
@@ -653,14 +808,27 @@ document.addEventListener('DOMContentLoaded', async function() {
                     const numValue = parseInt(value, 10);
                     config.maxVisibleDepartures = numValue;
                     document.documentElement.style.setProperty('--visible-departures', numValue);
-                    updateDisplay();
+                    updateDisplay(true);
                     updateURLParameter('maxdep', numValue.toString());
+                    saveConfigToLocalStorage();
+                }
+            },
+            // Lägg till inställning för "Endast avstigning"
+            {
+                type: 'toggle',
+                id: 'disembark-toggle',
+                label: 'Visa "Endast avstigning" indikator',
+                checked: config.showDisembarkOnly,
+                onChange: (checked) => {
+                    config.showDisembarkOnly = checked;
+                    updateDisplay(true);
+                    updateURLParameter('disembark', checked ? '1' : '0');
                     saveConfigToLocalStorage();
                 }
             }
         ]));
         
-        // Add Tillgänglighet section
+        // Lägg till Tillgänglighet-sektion
         panelContent.appendChild(createSettingsSection('Tillgänglighet', [
             {
                 type: 'toggle',
@@ -669,14 +837,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                 checked: config.showSpeechSynthesis,
                 onChange: (checked) => {
                     config.showSpeechSynthesis = checked;
-                    updateDisplay();
+                    updateDisplay(true);
                     updateURLParameter('speech', checked ? '1' : '0');
                     saveConfigToLocalStorage();
                 }
             }
         ]));
         
-        // Add Bryggval för Sjöstadstrafiken section if data is available
+        // Lägg till Bryggval för Sjöstadstrafiken-sektion om data är tillgänglig
         if (timetableData.today && timetableData.today.sjo && timetableData.today.sjo.departures) {
             const sjoStops = Object.keys(timetableData.today.sjo.departures || {});
             if (sjoStops.length > 0) {
@@ -692,7 +860,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         })),
                         onChange: (value) => {
                             config.highlightStop = value;
-                            updateDisplay();
+                            updateDisplay(true);
                             updateURLParameter('highlight', encodeURIComponent(value));
                             saveConfigToLocalStorage();
                         }
@@ -701,7 +869,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         }
         
-        // Add Bryggval för M/S Emelie section if data is available
+        // Lägg till Bryggval för M/S Emelie-sektion om data är tillgänglig
         if (timetableData.config && timetableData.config.city && timetableData.config.city.service_configuration) {
             const cityStops = timetableData.config.city.service_configuration.stop_sequence?.to_city || [];
             const fromCityStops = timetableData.config.city.service_configuration.stop_sequence?.from_city || [];
@@ -719,7 +887,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         })),
                         onChange: (value) => {
                             config.cityHighlightStop = value;
-                            updateDisplay();
+                            updateDisplay(true);
                             updateURLParameter('cityhighlight', encodeURIComponent(value));
                             saveConfigToLocalStorage();
                         }
@@ -735,7 +903,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         })),
                         onChange: (value) => {
                             config.cityReturnStop = value;
-                            updateDisplay();
+                            updateDisplay(true);
                             updateURLParameter('returnstop', encodeURIComponent(value));
                             saveConfigToLocalStorage();
                         }
@@ -746,18 +914,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         settingsPanel.appendChild(panelContent);
         
-        // Add panel footer with close button and reset button
+        // Lägg till panelfot med stängknapp och återställningsknapp
         const panelFooter = document.createElement('div');
         panelFooter.className = 'settings-footer';
         
-        // Reset button
+        // Återställningsknapp
         const resetButton = document.createElement('button');
         resetButton.className = 'settings-button-reset';
         resetButton.textContent = 'Återställ';
         resetButton.setAttribute('aria-label', 'Återställ alla inställningar till standard');
         resetButton.addEventListener('click', resetSettings);
         
-        // Close button
+        // Stängknapp
         const closeSettingsButton = document.createElement('button');
         closeSettingsButton.className = 'settings-button-close';
         closeSettingsButton.textContent = 'Stäng';
@@ -765,10 +933,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             closeSettingsPanel();
         });
         
-        // First add reset button, then spacer, then close button
+        // Först lägg till återställningsknapp, sedan mellanrum, sedan stängknapp
         panelFooter.appendChild(resetButton);
         
-        // Add a spacer div to push close button to the right
+        // Lägg till ett mellanrum för att skjuta stängknappen till höger
         const spacer = document.createElement('div');
         spacer.style.flexGrow = '1';
         panelFooter.appendChild(spacer);
@@ -776,10 +944,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         panelFooter.appendChild(closeSettingsButton);
         settingsPanel.appendChild(panelFooter);
         
-        // Add panel to document
+        // Lägg till panel till dokument
         document.body.appendChild(settingsPanel);
         
-        // Add overlay
+        // Lägg till overlay
         const overlay = document.createElement('div');
         overlay.className = 'settings-overlay';
         overlay.addEventListener('click', () => {
@@ -787,7 +955,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
         document.body.appendChild(overlay);
         
-        // Focus the first interactive element for accessibility
+        // Fokusera det första interaktiva elementet för tillgänglighet
         setTimeout(() => {
             const firstToggle = settingsPanel.querySelector('input[type="checkbox"], select');
             if (firstToggle) {
@@ -795,7 +963,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         }, 100);
         
-        // Add animation class after a tiny delay to trigger transition
+        // Lägg till animationsklass efter en liten fördröjning för att utlösa övergång
         setTimeout(() => {
             settingsPanel.classList.add('open');
             overlay.classList.add('visible');
@@ -803,7 +971,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     /**
-     * Closes the settings panel
+     * Stänger inställningspanelen
      */
     function closeSettingsPanel() {
         if (settingsPanel) {
@@ -817,7 +985,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }, 300);
             }
             
-            // Wait for animation to complete before removing from DOM
+            // Vänta på att animationen ska slutföras innan den tas bort från DOM
             setTimeout(() => {
                 if (settingsPanel) {
                     settingsPanel.remove();
@@ -828,10 +996,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     /**
-     * Creates a settings section with a title and items
-     * @param {string} title - Section title
-     * @param {Array<Object>} items - Setting items configuration
-     * @returns {HTMLElement} The settings section element
+     * Skapar en inställningssektion med en titel och objekt
+     * @param {string} title - Sektionstitel
+     * @param {Array<Object>} items - Inställningsobjektskonfiguration
+     * @returns {HTMLElement} Inställningssektionselementet
      */
     function createSettingsSection(title, items) {
         const section = document.createElement('div');
@@ -866,12 +1034,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     /**
-     * Creates a toggle setting element
-     * @param {string} id - Element ID
-     * @param {string} label - Setting label
-     * @param {boolean} initialState - Initial toggle state
-     * @param {Function} onChange - Change handler
-     * @returns {HTMLElement} The toggle setting element
+     * Skapar ett växlingsinställningselement
+     * @param {string} id - Element-ID
+     * @param {string} label - Inställningsetikett
+     * @param {boolean} initialState - Initialt växlingsläge
+     * @param {Function} onChange - Ändringshanterare
+     * @returns {HTMLElement} Växlingsinställningselementet
      */
     function createToggleSetting(id, label, initialState, onChange) {
         const container = document.createElement('div');
@@ -893,13 +1061,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     /**
-     * Creates a select setting element
-     * @param {string} id - Element ID
-     * @param {string} label - Setting label
-     * @param {string|number} initialValue - Initial selected value
-     * @param {Array<Object>} options - Select options {value, text}
-     * @param {Function} onChange - Change handler
-     * @returns {HTMLElement} The select setting element
+     * Skapar ett vallisteinställningselement
+     * @param {string} id - Element-ID
+     * @param {string} label - Inställningsetikett
+     * @param {string|number} initialValue - Initialt valt värde
+     * @param {Array<Object>} options - Valmöjligheter {value, text}
+     * @param {Function} onChange - Ändringshanterare
+     * @returns {HTMLElement} Vallisteinställningselementet
      */
     function createSelectSetting(id, label, initialValue, options, onChange) {
         const container = document.createElement('div');
@@ -918,7 +1086,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             optElement.value = option.value;
             optElement.textContent = option.text;
             
-            if (option.value == initialValue) { // Loose equality check for number/string comparison
+            if (option.value == initialValue) { // Lös likhetskontroll för nummer/sträng-jämförelse
                 optElement.selected = true;
             }
             
@@ -933,9 +1101,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
-     * Updates a URL parameter without refreshing the page
-     * @param {string} key - Parameter name
-     * @param {string} value - Parameter value
+     * Uppdaterar en URL-parameter utan att ladda om sidan
+     * @param {string} key - Parameternamn
+     * @param {string} value - Parametervärde
      */
     function updateURLParameter(key, value) {
         const url = new URL(window.location);
@@ -944,15 +1112,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
-     * Adds timetable validity information to the display
-     * @param {HTMLElement} wrapper - The container element
+     * Lägger till tidtabellsgiltighetsinfo till visningen
+     * @param {HTMLElement} wrapper - Behållarelementet
      */
     function addValidityInfo(wrapper) {
-        // Use config data for validity information
+        // Använd konfigurationsdata för giltighetsinfo
         if (timetableData.config && timetableData.config.city) {
             const cityConfig = timetableData.config.city;
             
-            // Find the current season
+            // Hitta aktuell säsong
             const now = new Date();
             let currentSeason = null;
             
@@ -973,27 +1141,34 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const infoElement = document.createElement("div");
                 infoElement.className = "validity-info";
                 infoElement.innerHTML = `Aktuell tidtabell gäller: ${validFrom.toLocaleDateString('sv-SE')} - ${validTo.toLocaleDateString('sv-SE')}`;
+                
+                // Lägg till senaste uppdateringstid om den finns tillgänglig
+                if (timetableData.lastUpdate) {
+                    const lastUpdateTime = new Date(timetableData.lastUpdate);
+                    infoElement.innerHTML += ` | Senaste uppdatering: ${lastUpdateTime.toLocaleTimeString('sv-SE')}`;
+                }
+                
                 wrapper.appendChild(infoElement);
             }
         }
     }
 
     /**
-     * Renders all timetables for the current schedule
-     * @param {HTMLElement} wrapper - The container element
+     * Renderar alla tidtabeller för aktuellt schema
+     * @param {HTMLElement} wrapper - Behållarelementet
      */
     function renderTimetables(wrapper) {
-        // Render Sjöstadstrafiken schedules if enabled
+        // Rendera Sjöstadstrafiken-scheman om aktiverat
         if (config.showSjostadstrafiken) {
             renderSjostadsTimetable(wrapper);
         }
 
-        // Render Emelietrafiken schedules if enabled
+        // Rendera Emelietrafiken-scheman om aktiverat
         if (config.showEmelietrafiken) {
             renderEmelieTimetables(wrapper);
         }
         
-        // If no timetables are visible, show a message
+        // Om inga tidtabeller är synliga, visa ett meddelande
         if (!config.showSjostadstrafiken && !config.showEmelietrafiken) {
             const noDataMessage = document.createElement("div");
             noDataMessage.className = "notification warning";
@@ -1004,8 +1179,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
-     * Renders Sjöstadstrafiken timetable
-     * @param {HTMLElement} wrapper - The container element
+     * Renderar Sjöstadstrafiken-tidtabell
+     * @param {HTMLElement} wrapper - Behållarelementet
      */
     function renderSjostadsTimetable(wrapper) {
         const sjoData = timetableData.today.sjo;
@@ -1020,16 +1195,16 @@ document.addEventListener('DOMContentLoaded', async function() {
             tomorrow.setDate(tomorrow.getDate() + 1);
             
             for (const [stop, times] of Object.entries(sjoData.departures)) {
-                // Create array with today's times with day information
+                // Skapa array med dagens tider med dagsinformation
                 const todayTimes = createEnhancedTimeObjects(times, now, now);
                 
-                // Add tomorrow's times (if we have them and they're needed)
+                // Lägg till morgondagens tider (om vi har dem och de behövs)
                 let tomorrowTimes = [];
                 if (sjoTomorrow && sjoTomorrow.departures && sjoTomorrow.departures[stop]) {
                     tomorrowTimes = createEnhancedTimeObjects(sjoTomorrow.departures[stop], tomorrow, now);
                 }
                 
-                // Combine both arrays
+                // Kombinera båda arrayerna
                 processedDepartures[stop] = timeHandler.processScheduleTimes(
                     [...todayTimes, ...tomorrowTimes], 
                     config.maxVisibleDepartures
@@ -1041,21 +1216,23 @@ document.addEventListener('DOMContentLoaded', async function() {
                     { departures: processedDepartures },
                     "Sjöstadstrafiken",
                     dayTypeText,
-                    config.highlightStop
+                    config.highlightStop,
+                    null,  // Inga "Endast avstigning" tider för Sjöstadstrafiken idag
+                    null   // Inga "Endast avstigning" tider för Sjöstadstrafiken imorgon
                 )
             );
         }
     }
 
     /**
-     * Merges morning, lunch and afternoon departures for city line
-     * @param {Object} schedule - Schedule containing different time periods
-     * @returns {Object} Merged departures
+     * Slår samman morgon-, lunch- och eftermiddagsavgångar för citylinjen
+     * @param {Object} schedule - Schema innehållande olika tidsperioder
+     * @returns {Object} Sammanslagna avgångar
      */
     function mergeCityLineDepartures(schedule) {
         const mergedDepartures = {};
         
-        // Helper function to process departures
+        // Hjälpfunktion för att bearbeta avgångar
         const processDepartures = (departures) => {
             if (!departures) return;
             Object.entries(departures).forEach(([stop, times]) => {
@@ -1066,22 +1243,22 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
         };
 
-        // Process morning departures if they exist
+        // Bearbeta morgon avgångar om de finns
         if (schedule.morning && schedule.morning.departures) {
             processDepartures(schedule.morning.departures);
         }
 
-        // Process lunch departures if they exist (added in Spring 2025 schedule)
+        // Bearbeta lunch avgångar om de finns (tillagda i vår 2025-schema)
         if (schedule.lunch && schedule.lunch.departures) {
             processDepartures(schedule.lunch.departures);
         }
 
-        // Process afternoon departures if they exist
+        // Bearbeta eftermiddags avgångar om de finns
         if (schedule.afternoon && schedule.afternoon.departures) {
             processDepartures(schedule.afternoon.departures);
         }
 
-        // Sort times for each stop
+        // Sortera tider för varje hållplats
         Object.keys(mergedDepartures).forEach(stop => {
             mergedDepartures[stop].sort();
         });
@@ -1090,8 +1267,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
-     * Renders Emelietrafiken timetables
-     * @param {HTMLElement} wrapper - The container element
+     * Renderar Emelietrafiken-tidtabeller
+     * @param {HTMLElement} wrapper - Behållarelementet
      */
     function renderEmelieTimetables(wrapper) {
         const cityData = timetableData.today.city;
@@ -1110,22 +1287,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (cityData.to_city) {
             let toCityDepartures;
             
-            // Handle different file structures (sometimes nested, sometimes flat)
+            // Hantera olika filstrukturer (ibland nästlade, ibland flata)
             if (cityData.to_city.departures) {
-                // Weekend structure in spring format
+                // Helgstruktur i vårformat
                 toCityDepartures = cityData.to_city.departures;
             } else {
-                // Weekday structure with morning/afternoon periods
+                // Vardagsstruktur med morgon/eftermiddagsperioder
                 toCityDepartures = mergeCityLineDepartures(cityData.to_city);
             }
             
-            // Process today's departures
+            // Bearbeta dagens avgångar
             const processedToCity = {};
             for (const [stop, times] of Object.entries(toCityDepartures)) {
-                // Create array with today's times with day information
+                // Skapa array med dagens tider med dagsinformation
                 const todayTimes = createEnhancedTimeObjects(times, now, now);
                 
-                // Get tomorrow's times if available
+                // Hämta morgondagens tider om tillgängliga
                 let tomorrowTimes = [];
                 if (cityTomorrow && cityTomorrow.to_city) {
                     let tomorrowDepartures;
@@ -1141,43 +1318,49 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                 }
                 
-                // Combine and process
+                // Kombinera och bearbeta
                 processedToCity[stop] = timeHandler.processScheduleTimes(
                     [...todayTimes, ...tomorrowTimes], 
                     config.maxVisibleDepartures
                 );
             }
 
+            // Hämta "Endast avstigning" tider för dagens och morgondagens TO_CITY
+            const disembarkOnlyToCityToday = timetableData.today.disembarkOnly?.toCity || null;
+            const disembarkOnlyToCityTomorrow = timetableData.tomorrow.disembarkOnly?.toCity || null;
+
             wrapper.appendChild(
                 renderer.createTimetable(
                     { departures: processedToCity },
                     "M/S Emelie → City",
                     dayTypeText,
-                    config.cityHighlightStop
+                    config.cityHighlightStop,
+                    disembarkOnlyToCityToday,    // Dagens "Endast avstigning" tider för TO_CITY
+                    disembarkOnlyToCityTomorrow  // Morgondagens "Endast avstigning" tider för TO_CITY
                 )
             );
         }
 
-        // FROM CITY (if enabled)
+        // FROM CITY (om aktiverat)
         if (config.showBothDirections && cityData.from_city) {
             let fromCityDepartures;
             
-            // Handle different file structures
+            // Hantera olika filstrukturer
             if (cityData.from_city.departures) {
-                // Weekend structure in spring format
+                // Helgstruktur i vårformat
                 fromCityDepartures = cityData.from_city.departures;
             } else {
-                // Weekday structure with morning/afternoon periods
+                // Vardagsstruktur med morgon/eftermiddagsperioder
                 fromCityDepartures = mergeCityLineDepartures(cityData.from_city);
             }
             
-            // Process today's and tomorrow's departures
+            // Bearbeta dagens och morgondagens avgångar
             const processedFromCity = {};
             for (const [stop, times] of Object.entries(fromCityDepartures)) {
-                // Create array with today's times with day information
+                // Skapa array med dagens tider med dagsinformation
                 const todayTimes = createEnhancedTimeObjects(times, now, now);
                 
-                // Get tomorrow's times if available
+                // Hämta morgondagens tider om tillgängliga
                 let tomorrowTimes = [];
                 if (cityTomorrow && cityTomorrow.from_city) {
                     let tomorrowDepartures;
@@ -1193,31 +1376,37 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                 }
                 
-                // Combine and process
+                // Kombinera och bearbeta
                 processedFromCity[stop] = timeHandler.processScheduleTimes(
                     [...todayTimes, ...tomorrowTimes], 
                     config.maxVisibleDepartures
                 );
             }
 
+            // Hämta "Endast avstigning" tider för både dagens och morgondagens FROM_CITY
+            const disembarkOnlyFromCityToday = timetableData.today.disembarkOnly?.fromCity || null;
+            const disembarkOnlyFromCityTomorrow = timetableData.tomorrow.disembarkOnly?.fromCity || null;
+
             wrapper.appendChild(
                 renderer.createTimetable(
                     { departures: processedFromCity },
                     "M/S Emelie ← City",
                     dayTypeText,
-                    config.cityReturnStop
+                    config.cityReturnStop,
+                    disembarkOnlyFromCityToday,     // Dagens "Endast avstigning" tider för FROM_CITY
+                    disembarkOnlyFromCityTomorrow   // Morgondagens "Endast avstigning" tider för FROM_CITY
                 )
             );
         }
     }
 
     /**
-     * Handles and displays errors to the user
-     * @param {Error} error - The error object
-     * @param {string} message - User-friendly error message
+     * Hanterar och visar fel för användaren
+     * @param {Error} error - Felobjektet
+     * @param {string} message - Användarvänligt felmeddelande
      */
     function handleError(error, message) {
-        console.error('Application error:', error);
+        console.error('Applikationsfel:', error);
         const appElement = document.getElementById('app');
         const wrapper = renderer.createWrapper();
         wrapper.innerHTML = `
@@ -1229,73 +1418,39 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
-     * Starts periodic updates of the display
+     * Kontrollerar om det är ett nytt dygn och laddar i så fall om tidtabellen
      */
-    function startPeriodicUpdates() {
-        setInterval(async () => {
-            try {
-                debugLog('Running periodic update');
-                
-                // Check if we need to reload data (e.g., day change or time change)
-                const now = new Date();
-                const tomorrow = new Date(now);
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                
-                // We need to reload if:
-                // 1. The date has changed
-                // 2. The clock has moved past midnight
-                const needsReload = !timetableData.today ||
-                                    !timetableData.today.sjo ||
-                                    !timetableData.today.city ||
-                                    new Date(timetableData.today.sjo._loadedForDate).getDate() !== now.getDate();
-                
-                if (needsReload) {
-                    debugLog('Day changed, reloading timetable data');
-                    
-                    // If config data is not loaded yet, load it
-                    if (!timetableData.config.sjo || !timetableData.config.city) {
-                        timetableData.config = await loadConfigData();
-                    }
-                    
-                    // Load today's and tomorrow's timetables
-                    const [todayData, tomorrowData] = await Promise.all([
-                        loadTimetableForDate(timetableData.config, now),
-                        loadTimetableForDate(timetableData.config, tomorrow)
-                    ]);
-                    
-                    if (todayData && tomorrowData) {
-                        timetableData.today = todayData;
-                        timetableData.tomorrow = tomorrowData;
-                        updateDisplay();
-                    }
-                } else {
-                    // Just update the display with current data
-                    updateDisplay();
-                }
-            } catch (error) {
-                handleError(error, 'Kunde inte uppdatera tidtabellen');
-            }
-        }, config.updateInterval);
+    function checkForMidnight() {
+        const now = new Date();
+        
+        // Om vi inte har någon tidigare laddad data, eller om det är ett nytt dygn
+        if (!timetableData.today || !timetableData.today.sjo || !timetableData.today.city ||
+            new Date(timetableData.today.sjo._loadedForDate).getDate() !== now.getDate()) {
+            
+            debugLog('Nytt dygn detekterat, laddar om tidtabellsdata');
+            loadAllTimetables();
+        }
     }
 
-    // Initialize the application
-    async function initialize() {
+    /**
+     * Laddar om alla tidtabeller från server
+     */
+    async function loadAllTimetables() {
         try {
-            debugLog('Initializing application...');
-            
-            // Load configuration data
-            timetableData.config = await loadConfigData();
-            
-            if (!timetableData.config) {
-                handleError(null, 'Kunde inte ladda konfigurationsdata');
-                return;
-            }
-            
-            // Load today's and tomorrow's timetables
             const now = new Date();
             const tomorrow = new Date(now);
             tomorrow.setDate(tomorrow.getDate() + 1);
             
+            // Om konfigurationsdata inte är laddat än, ladda det
+            if (!timetableData.config.sjo || !timetableData.config.city) {
+                timetableData.config = await loadConfigData();
+                if (!timetableData.config) {
+                    handleError(null, 'Kunde inte ladda konfigurationsdata');
+                    return;
+                }
+            }
+            
+            // Ladda dagens och morgondagens tidtabeller
             const [todayData, tomorrowData] = await Promise.all([
                 loadTimetableForDate(timetableData.config, now),
                 loadTimetableForDate(timetableData.config, tomorrow)
@@ -1304,22 +1459,85 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (todayData && tomorrowData) {
                 timetableData.today = todayData;
                 timetableData.tomorrow = tomorrowData;
+                timetableData.lastUpdate = now;
+                updateDisplay(true);
                 
-                // Perform first display update
-                updateDisplay();
-                
-                // Start periodic updates
-                startPeriodicUpdates();
-                
-                debugLog('Application initialized successfully');
+                debugLog('Tidtabellsdata laddad framgångsrikt');
             } else {
                 handleError(null, 'Kunde inte ladda tidtabellsdata');
             }
+        } catch (error) {
+            handleError(error, 'Fel vid laddning av tidtabellsdata');
+        }
+    }
+
+    /**
+     * Startar alla uppdateringstimers
+     * - displayUpdate: Uppdaterar visningen varje minut
+     * - dataRefresh: Hämtar ny data från servern var 30:e minut
+     * - midnightCheck: Kontrollerar om det är ett nytt dygn varje minut
+     */
+    function startAllTimers() {
+        // Avbryt eventuella existerande timers
+        if (timers.displayUpdate) clearInterval(timers.displayUpdate);
+        if (timers.dataRefresh) clearInterval(timers.dataRefresh);
+        if (timers.midnightCheck) clearInterval(timers.midnightCheck);
+        
+        // Starta ny timer för visningsuppdatering (varje minut)
+        timers.displayUpdate = setInterval(() => {
+            updateDisplay();
+        }, config.updateInterval);
+        
+        // Starta ny timer för datahämtning (var 30:e minut)
+        timers.dataRefresh = setInterval(() => {
+            loadAllTimetables();
+        }, config.dataRefreshInterval);
+        
+        // Starta ny timer för midnattskontroll (varje minut)
+        timers.midnightCheck = setInterval(() => {
+            checkForMidnight();
+        }, config.midnightCheckInterval);
+    }
+
+    // Initialisera applikationen
+    async function initialize() {
+        try {
+            debugLog('Initialiserar applikation...');
+            
+            // Ladda konfigurationsdata
+            timetableData.config = await loadConfigData();
+            
+            if (!timetableData.config) {
+                handleError(null, 'Kunde inte ladda konfigurationsdata');
+                return;
+            }
+            
+            // Ladda dagens och morgondagens tidtabeller
+            await loadAllTimetables();
+            
+            // Starta periodiska uppdateringar
+            startAllTimers();
+            
+            // Lyssna på online/offline händelser för att hantera nätverksförändringar
+            window.addEventListener('online', () => {
+                debugLog('Nätverk tillgängligt igen, uppdaterar data...');
+                loadAllTimetables();
+            });
+            
+            // Lyssna på visibility change för att uppdatera när användaren kommer tillbaka till sidan
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    debugLog('Sidan aktiv igen, uppdaterar display...');
+                    updateDisplay(true);
+                }
+            });
+            
+            debugLog('Applikationen initialiserades framgångsrikt');
         } catch (error) {
             handleError(error, 'Kunde inte starta applikationen');
         }
     }
 
-    // Start the application
+    // Starta applikationen
     initialize();
 });
