@@ -6,6 +6,10 @@
  * och hanterar applikationens övergripande livscykel.
  * 
  * Versionshistorik:
+ * 7.2.2 (2025-03-31) - Fixad bugg med Återställ-knappen
+ * 7.2.1 (2025-03-31) - Fixad bugg med Renderer-referens i GitHub Pages
+ * 7.2.0 (2025-03-30) - Fixad cache-busting för GitHub Pages
+ * 7.1.0 (2025-03-29) - Fixat så fotnot bara visas när det faktiskt finns "Endast avstigning"-tider
  * 7.0.0 (2025-03-28) - Fixad dagsbaserad hantering av "Endast avstigning"-indikatorer
  * 6.1.0 (2025-03-26) - Förbättrad automatisk uppdateringsmekanism för aktuella tider
  * 6.0.0 (2025-03-26) - Refaktorerad för robust hantering av "Endast avstigning", förbättrad dokumentation
@@ -25,7 +29,7 @@
  * 1.0.0 (2024-01-11) - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 7.0.0
+ * @version 7.2.2
  * @license MIT
  */
 
@@ -54,10 +58,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         debug: false                     // Aktivera debugloggning
     };
 
-    // Förhindra caching av JSON-anrop
+    /**
+     * Förhindra caching av JSON-anrop genom att lägga till en timestamp som query parameter
+     * FIXAD: Säkerställer att URL:en konstrueras korrekt för GitHub Pages
+     * 
+     * @param {string} url - URL att lägga till cache-busting på
+     * @returns {string} URL med cache-busting parameter
+     */
     function addCacheBuster(url) {
-        const bustedUrl = new URL(url, window.location.origin);
-        bustedUrl.searchParams.set('_nocache', Date.now().toString());
+        // Skapa ett nytt URL-objekt baserat på aktuell sida och den relativa URL:en
+        const bustedUrl = new URL(url, window.location.href);
+        
+        // Lägg till en timestamp som query-parameter
+        bustedUrl.searchParams.append('_nocache', Date.now().toString());
+        
+        // Returnera den kompletta URL:en som en sträng
         return bustedUrl.toString();
     }
 
@@ -166,15 +181,78 @@ document.addEventListener('DOMContentLoaded', async function() {
      * Återställer alla inställningar till standardvärden och laddar om sidan
      */
     function resetSettings() {
-        if (localStorage) {
-            localStorage.removeItem('sjostadsfarjetrafiken_settings');
+        try {
+            if (localStorage) {
+                localStorage.removeItem('sjostadsfarjetrafiken_settings');
+            }
+            
+            // Rensa URL-parametrar också
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            // Stäng inställningspanelen om den är öppen
+            if (settingsPanel) {
+                closeSettingsPanel();
+            }
+            
+            // Återställ konfigurationen till standardvärden
+            config.showSjostadstrafiken = true;
+            config.showEmelietrafiken = true;
+            config.showBothDirections = true;
+            config.maxVisibleDepartures = 7;
+            config.highlightStop = "Lumabryggan";
+            config.cityHighlightStop = "Lumabryggan";
+            config.cityReturnStop = "Nybroplan";
+            config.showSpeechSynthesis = true;
+            config.showDisembarkOnly = true;
+            
+            // Uppdatera CSS-variabel
+            document.documentElement.style.setProperty('--visible-departures', config.maxVisibleDepartures);
+            
+            // Uppdatera visningen direkt utan att ladda om sidan
+            updateDisplay(true);
+            
+            // Visa bekräftelse
+            const appElement = document.getElementById('app');
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = 'Inställningar återställda till standard.';
+            notification.style.backgroundColor = 'rgba(0, 255, 0, 0.2)';
+            notification.style.padding = '10px';
+            notification.style.marginBottom = '10px';
+            notification.style.borderRadius = '4px';
+            
+            // Lägg till notifieringen högst upp
+            if (appElement.firstChild) {
+                appElement.insertBefore(notification, appElement.firstChild);
+            } else {
+                appElement.appendChild(notification);
+            }
+            
+            // Ta bort notifieringen efter 3 sekunder
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        } catch (error) {
+            console.error('Fel vid återställning av inställningar:', error);
+            
+            // Visa felmeddelande
+            const appElement = document.getElementById('app');
+            const errorNotification = document.createElement('div');
+            errorNotification.className = 'notification error';
+            errorNotification.textContent = 'Ett fel uppstod vid återställning av inställningar.';
+            
+            // Lägg till felmeddelande högst upp
+            if (appElement.firstChild) {
+                appElement.insertBefore(errorNotification, appElement.firstChild);
+            } else {
+                appElement.appendChild(errorNotification);
+            }
+            
+            // Ta bort felmeddelandet efter 3 sekunder
+            setTimeout(() => {
+                errorNotification.remove();
+            }, 3000);
         }
-        
-        // Rensa URL-parametrar också
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Ladda om sidan för att tillämpa standardinställningar
-        window.location.reload();
     }
 
     /**
