@@ -5,21 +5,15 @@
  * Inkluderar mörkt tema, responsiv design och tillgänglighetsfunktioner.
  * 
  * Versionshistorik:
- * 3.2.0 (2025-04-01) - Uppdaterad position av talsyntes-knappen till titelsektionen
- * 3.1.0 (2025-03-31) - Justerad layout för titelsektionen, borttagna undertitlar
- * 3.0.2 (2025-03-31) - Fixad styling för talsyntes-knappen med korrekt placering inom tiden
- * 3.0.1 (2025-03-31) - Fixad styling för talsyntes-knappens container och placering
- * 3.0.0 (2025-03-26) - Tillagd styling för "Endast avstigning" indikator
- * 2.5.0 (2025-03-25) - Tillagd styling för återställningsknapp i inställningspanelen
- * 2.4.0 (2025-03-22) - Tillagd styling för talsyntesfunktion
- * 2.3.0 (2025-03-21) - Tillagd inställningspanel, hamburger-meny och förbättrat mobilstöd
- * 2.2.1 (2025-03-20) - Fixat problemet med avstånd i highlight-ramar
- * 2.2.0 (2025-03-19) - Fixat problemet med markeringsramar, tillagda växlingskontroller
- * 2.0.0 (2025-01-16) - Konverterad till statisk webbstyling, förbättrad tillgänglighet
- * 1.0.0 (2024-01-11) - Originalversion baserad på MMM-Resseltrafiken
+ * 4.0.0 - Tillagd styling för uppdateringsnotifikationer, versionshantering
+ * 3.2.0 - Uppdaterad position av talsyntes-knappen till titelsektionen
+ * 3.1.0 - Justerad layout för titelsektionen, borttagna undertitlar
+ * 3.0.0 - Tillagd styling för "Endast avstigning" indikator
+ * 2.0.0 - Tillagd inställningspanel, hamburger-meny och förbättrat mobilstöd
+ * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 3.2.0
+ * @version 4.0.0
  * @license MIT
  */
 
@@ -41,6 +35,9 @@
     --color-reset-button: rgba(255, 0, 0, 0.15);
     --color-reset-button-hover: rgba(255, 0, 0, 0.25);
     --color-disembark-indicator: rgba(255, 255, 0, 0.8);
+    --color-update-banner: rgba(0, 128, 255, 0.15);
+    --color-update-button: rgba(0, 128, 255, 0.25);
+    --color-update-button-hover: rgba(0, 128, 255, 0.35);
     
     /* Typography */
     --font-primary: "Roboto Condensed", system-ui, sans-serif;
@@ -90,6 +87,66 @@ body {
     max-width: var(--container-max-width);
     margin: 0 auto;
     padding: 20px;
+}
+
+/* Update notification banner */
+.update-notification {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--color-update-banner);
+    padding: 12px;
+    text-align: center;
+    z-index: 1000;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.update-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.update-content span {
+    color: var(--color-text-bright);
+    font-weight: bold;
+}
+
+#update-now-btn, .update-button {
+    background-color: var(--color-update-button);
+    border: none;
+    color: var(--color-text-bright);
+    padding: 8px 16px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-family: var(--font-primary);
+    font-weight: bold;
+    transition: background-color var(--transition-speed) ease;
+}
+
+#update-now-btn:hover, .update-button:hover {
+    background-color: var(--color-update-button-hover);
+}
+
+/* Update banner for in-app notification */
+.update-banner {
+    background-color: var(--color-update-banner);
+    color: var(--color-text-bright);
+    padding: 12px;
+    margin-bottom: 20px;
+    border-radius: var(--border-radius);
+    width: 100%;
+}
+
+.update-banner-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 /* Speech Synthesis Button - Updated for title positioning */
@@ -681,7 +738,7 @@ footer {
     }
 }
 
-/* Responsive Design - Tablet */
+/* Responsive Design */
 @media (max-width: 768px) {
     :root {
         --font-size-base: 16px;
@@ -708,13 +765,25 @@ footer {
         padding: 10px;
     }
     
-    /* Adjust settings panel for mobile */
     .settings-panel {
         width: 85vw;
     }
+    
+    .update-notification {
+        padding: 10px;
+    }
+    
+    .update-content {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    #update-now-btn, .update-button {
+        width: 100%;
+        padding: 10px;
+    }
 }
 
-/* Responsive Design - Mobile */
 @media (max-width: 480px) {
     :root {
         --stop-column-width: 120px;
@@ -735,9 +804,18 @@ footer {
     .settings-panel {
         width: 100vw;
     }
+    
+    .update-banner-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .update-banner {
+        padding: 10px;
+    }
 }
 
-/* Accessibility Enhancements */
+/* Accessibility */
 @media (prefers-reduced-motion: reduce) {
     * {
         transition: none !important;
@@ -745,7 +823,6 @@ footer {
     }
 }
 
-/* Focus Styles - applied for all focus interactions */
 .MMM-Resseltrafiken .times span:focus {
     outline: 2px solid var(--color-error);
     outline-offset: 2px;
@@ -761,7 +838,9 @@ footer {
     .settings-button,
     .settings-panel,
     .settings-overlay,
-    .speech-button {
+    .speech-button,
+    .update-notification,
+    .update-banner {
         display: none;
     }
 }

@@ -10,7 +10,8 @@
     <meta name="title" content="Sjöstadsfärjetrafiken - Tidtabell för Sjöstadstrafiken och M/S Emelie">
     <meta name="description" content="Aktuella tidtabeller för båttrafiken i Hammarby Sjöstad med Sjöstadstrafiken och M/S Emelie">
     <meta name="author" content="Christian Gillinger">
-    <meta name="version" content="3.0.0">
+    <meta name="version" content="4.0.0">
+    <meta name="app-version" content="4.0.0">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -68,6 +69,14 @@
         Laddar tidtabeller...
     </div>
 
+    <!-- Update notification -->
+    <div id="update-notification" class="update-notification" role="alert" style="display: none;">
+        <div class="update-content">
+            <span>Ny version tillgänglig!</span>
+            <button id="update-now-btn">Uppdatera nu</button>
+        </div>
+    </div>
+
     <!-- Error Boundary -->
     <div id="error-container" role="alert" aria-atomic="true"></div>
 
@@ -78,6 +87,8 @@
 
     <!-- Error Tracking -->
     <script>
+        window.APP_VERSION = '4.0.0';
+
         window.onerror = function(msg, url, lineNo, columnNo, error) {
             console.error('Error:', {
                 message: msg,
@@ -107,12 +118,46 @@
             }
         });
 
+        // Handle update button click
+        document.getElementById('update-now-btn').addEventListener('click', function() {
+            // Clear caches and reload page
+            if ('caches' in window) {
+                caches.keys().then(function(cacheNames) {
+                    cacheNames.forEach(function(cacheName) {
+                        caches.delete(cacheName);
+                    });
+                    location.reload(true);
+                });
+            } else {
+                location.reload(true);
+            }
+        });
+
+        // Listen for messages from the service worker
+        navigator.serviceWorker.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'UPDATE_AVAILABLE') {
+                // Show update notification
+                document.getElementById('update-notification').style.display = 'block';
+            }
+        });
+
         // Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./service-worker.js')
                     .then(registration => {
                         console.log('ServiceWorker registration successful');
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New version installed but not activated yet
+                                    document.getElementById('update-notification').style.display = 'block';
+                                }
+                            });
+                        });
                     })
                     .catch(err => {
                         console.log('ServiceWorker registration failed: ', err);
@@ -124,7 +169,7 @@
     <!-- Version Information -->
     <footer role="contentinfo">
         <small>
-            Sjöstadsfärjetrafiken v3.0.0 | Utvecklad av Christian Gillinger | Detta är en inofficiell tjänst och har inget med Ressel Rederi att göra
+            Sjöstadsfärjetrafiken v4.0.0 | Utvecklad av Christian Gillinger | Detta är en inofficiell tjänst och har inget med Ressel Rederi att göra
         </small>
     </footer>
 </body>

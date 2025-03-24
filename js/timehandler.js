@@ -5,19 +5,15 @@
  * tidtabellsapplikation. Denna modul hanterar tidskonverteringar och sortering av avgångar.
  * 
  * Versionshistorik:
- * 6.0.0 (2025-03-26) - Förbättrad kompatibilitet med "Endast avstigning"-hantering
- * 5.1.0 (2025-03-25) - Tagit bort passerade avgångar från visningen; nästa avgång alltid först
- * 5.0.1 (2025-03-25) - Fixat avdupliceringlogik för att använda uniqueId istället för tid
- * 5.0.0 (2025-03-24) - Lagt till dagsbaserad tidsidentifiering för korrekt sortering och avduplicering
- * 4.0.0 (2025-03-21) - Förenklad för ny JSON-struktur, borttagen schematypidentifikation
- * 3.0.0 (2025-03-20) - Lagt till stöd för separata dagtyper
- * 2.4.0 (2025-03-22) - Uppdaterad versionsnumrering för konsekvens med andra komponenter
- * 2.1.0 (2025-03-18) - Uppdaterad för att hantera säsongstidtabeller och speciella helgdagsregler
- * 2.0.0 (2025-01-16) - Konverterad till statisk webbmodul, förbättrad helgdagshantering
- * 1.0.0 (2024-01-11) - Originalversion baserad på MMM-Resseltrafiken
+ * 4.0.0 - Förbättrad kompatibilitet med "Endast avstigning"-hantering, versionshantering
+ * 3.1.0 - Tagit bort passerade avgångar från visningen; nästa avgång alltid först
+ * 3.0.1 - Fixat avdupliceringlogik för att använda uniqueId istället för tid
+ * 3.0.0 - Lagt till dagsbaserad tidsidentifiering för korrekt sortering och avduplicering
+ * 2.0.0 - Förenklad för ny JSON-struktur, borttagen schematypidentifikation
+ * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 6.0.0
+ * @version 4.0.0
  * @license MIT
  */
 

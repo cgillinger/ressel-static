@@ -3,15 +3,15 @@
  * Caches application assets for offline functionality
  * 
  * Version History:
- * 4.0.0 (2025-03-28) - Förbättrad felhantering i fetch-event, fixad headers-kontroll
- * 3.0.0 (2025-03-26) - Uppdaterad för att stödja "Endast avstigning" funktionalitet
- *                     - Förbättrad cachehantering för JSON-filer för att alltid visa aktuella tider
- * 2.4.0 (2025-03-22) - Uppdaterad version med stöd för talsyntes
- * 2.0.0 (2025-01-16) - Original service worker
+ * 4.0.0 - Förbättrad versionshantering och automatisk uppdatering
+ * 3.0.0 - Förbättrad felhantering i fetch-event, fixad headers-kontroll
+ * 2.0.0 - Förbättrad cachehantering för JSON-filer
+ * 1.0.0 - Original service worker
  */
 
-const CACHE_NAME = 'resseltrafiken-v4.0.0';
-const JSON_CACHE_NAME = 'resseltrafiken-json-v4.0.0';
+const APP_VERSION = '4.0.0';
+const CACHE_NAME = `resseltrafiken-v${APP_VERSION}`;
+const JSON_CACHE_NAME = `resseltrafiken-json-v${APP_VERSION}`;
 
 // Statiska filer att cacha för offline-användning
 const STATIC_FILES_TO_CACHE = [
@@ -39,6 +39,33 @@ const JSON_FILES = [
   './data/ressel-city-spring-2025-sunday.json'
 ];
 
+// Check for version mismatch
+const checkVersion = async () => {
+  try {
+    const response = await fetch('./manifest.json?_=' + Date.now());
+    if (response.ok) {
+      const manifest = await response.json();
+      
+      // If manifest version doesn't match current SW version
+      if (manifest.version && manifest.version !== APP_VERSION) {
+        console.log(`Version mismatch detected: SW=${APP_VERSION}, Manifest=${manifest.version}`);
+        
+        // Notify all clients about the update
+        const clients = await self.clients.matchAll();
+        for (const client of clients) {
+          client.postMessage({
+            type: 'UPDATE_AVAILABLE',
+            current: APP_VERSION,
+            new: manifest.version
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error checking version:', error);
+  }
+};
+
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -54,6 +81,10 @@ self.addEventListener('install', (event) => {
             console.log('Pre-caching JSON files for offline use');
             return jsonCache.addAll(JSON_FILES);
           });
+      })
+      .then(() => {
+        // Skip waiting to activate the new service worker immediately
+        return self.skipWaiting();
       })
       .catch(error => {
         console.error('Fel vid cacheinstallation:', error);
@@ -75,11 +106,24 @@ self.addEventListener('activate', (event) => {
         })
       );
     })
+    .then(() => {
+      // Take control of all clients immediately
+      return self.clients.claim();
+    })
+    .then(() => {
+      // Check for version changes
+      return checkVersion();
+    })
     .catch(error => {
       console.error('Fel vid cachaktivering:', error);
     })
   );
 });
+
+// Periodic version check (every hour)
+setInterval(() => {
+  checkVersion();
+}, 3600000); // 1 hour
 
 // Fetch event - network-first for JSON, cache-first for static assets
 self.addEventListener('fetch', (event) => {
@@ -196,5 +240,22 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  } else if (event.data && event.data.type === 'CHECK_VERSION') {
+    checkVersion();
+  } else if (event.data && event.data.type === 'CLEAR_CACHES') {
+    // Rensa alla cacher och meddela om det är klart
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          return caches.delete(cacheName);
+        })
+      );
+    }).then(() => {
+      // Meddela att alla cacher är borttagna
+      event.ports[0].postMessage({ success: true });
+    }).catch(error => {
+      console.error('Fel vid rensning av cacher:', error);
+      event.ports[0].postMessage({ success: false, error: error.message });
+    });
   }
 });

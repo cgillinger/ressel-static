@@ -6,31 +6,16 @@
  * och hanterar applikationens övergripande livscykel.
  * 
  * Versionshistorik:
- * 7.3.0 (2025-04-01) - Ta bort "Senaste uppdatering"-text, ändra standardvärde för talsyntes
- * 7.2.2 (2025-03-31) - Fixad bugg med Återställ-knappen
- * 7.2.1 (2025-03-31) - Fixad bugg med Renderer-referens i GitHub Pages
- * 7.2.0 (2025-03-30) - Fixad cache-busting för GitHub Pages
- * 7.1.0 (2025-03-29) - Fixat så fotnot bara visas när det faktiskt finns "Endast avstigning"-tider
- * 7.0.0 (2025-03-28) - Fixad dagsbaserad hantering av "Endast avstigning"-indikatorer
- * 6.1.0 (2025-03-26) - Förbättrad automatisk uppdateringsmekanism för aktuella tider
- * 6.0.0 (2025-03-26) - Refaktorerad för robust hantering av "Endast avstigning", förbättrad dokumentation
- * 5.1.1 (2025-03-25) - Lagt till reset-knapp och ändrat standard till 7 avgångar
- * 5.1.0 (2025-03-25) - Tagit bort passerade avgångar från visningen; nästa avgång alltid först
- * 5.0.0 (2025-03-24) - Lagt till dagsbaserad tidsidentifiering för korrekt sortering och avduplicering
- * 4.2.0 (2025-03-24) - Tagit bort maximalt avgångslimit för att tillåta flexibel visning av alla avgångar
- * 4.1.0 (2025-03-23) - Begränsat max avgångar till 7 för att förhindra visningsproblem
- * 4.0.0 (2025-03-21) - Fullständig omdesign med ny JSON-struktur för dagtypshantering
- * 3.0.0 (2025-03-20) - Lagt till stöd för separata dagtyper
- * 2.4.0 (2025-03-22) - Lagt till talsyntesfunktionalitet för tillgänglighet
- * 2.3.1 (2025-03-21) - Fixat synlighet av riktningsinställningar, ersatt växlar med inställningspanel
- * 2.2.1 (2025-03-20) - Fixat synlighetslogik för kontrollväxlar
- * 2.2.0 (2025-03-19) - Lagt till alternativ för att visa/dölja individuella tidtabeller
- * 2.1.0 (2025-03-18) - Lagt till stöd för säsongsbaserade tidtabeller
- * 2.0.0 (2025-01-16) - Konverterad till statisk webbapplikation
- * 1.0.0 (2024-01-11) - Originalversion baserad på MMM-Resseltrafiken
+ * 4.0.0 - Förbättrad versionshantering, automatisk uppdatering, och reload vid reset
+ * 3.3.0 - Ta bort "Senaste uppdatering"-text, ändra standardvärde för talsyntes
+ * 3.2.0 - Fixad bugg med Återställ-knappen
+ * 3.1.0 - Fixad bugg med Renderer-referens i GitHub Pages
+ * 3.0.0 - Fixad cache-busting för GitHub Pages
+ * 2.0.0 - Fixat så fotnot bara visas när det faktiskt finns "Endast avstigning"-tider
+ * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 7.3.0
+ * @version 4.0.0
  * @license MIT
  */
 
@@ -40,28 +25,32 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @type {Object}
      */
     const config = {
-        updateInterval: 60000,           // Uppdateringsintervall i millisekunder (1 minut)
-        dataRefreshInterval: 1800000,    // Uppdatera data från server var 30:e minut
-        midnightCheckInterval: 60000,    // Kontrollera midnatt var minut
-        showBothDirections: true,        // Visa både utgående och returresor
-        showSjostadstrafiken: true,      // Visa Sjöstadstrafiken tidtabell
-        showEmelietrafiken: true,        // Visa Emelietrafiken (M/S Emelie) tidtabell
-        showSpeechSynthesis: false,      // Visa talsyntes-knappar för tillgänglighet (ändrat till false)
-        showDisembarkOnly: true,         // Visa "Endast avstigning" indikator (aktivt som standard)
-        highlightStop: "Lumabryggan",    // Hållplats att markera i användargränssnittet
-        cityHighlightStop: "Lumabryggan", // Hållplats att markera för citylinjen (till city)
-        cityReturnStop: "Nybroplan",     // Returhållplats att markera för cityriktning
-        maxVisibleDepartures: 7,         // Standardantal synliga avgångar per hållplats (ändrat från 9 till 7)
-        dataPaths: {                     // Sökvägar till konfigurationsfiler
+        version: '4.0.0',                  // Applikationsversion (uppdatera vid varje ny version)
+        updateInterval: 60000,             // Uppdateringsintervall i millisekunder (1 minut)
+        dataRefreshInterval: 1800000,      // Uppdatera data från server var 30:e minut
+        midnightCheckInterval: 60000,      // Kontrollera midnatt var minut
+        versionCheckInterval: 3600000,     // Kontrollera versionsuppdateringar varje timme
+        showBothDirections: true,          // Visa både utgående och returresor
+        showSjostadstrafiken: true,        // Visa Sjöstadstrafiken tidtabell
+        showEmelietrafiken: true,          // Visa Emelietrafiken (M/S Emelie) tidtabell
+        showSpeechSynthesis: false,        // Visa talsyntes-knappar för tillgänglighet (ändrat till false)
+        showDisembarkOnly: true,           // Visa "Endast avstigning" indikator (aktivt som standard)
+        highlightStop: "Lumabryggan",      // Hållplats att markera i användargränssnittet
+        cityHighlightStop: "Lumabryggan",  // Hållplats att markera för citylinjen (till city)
+        cityReturnStop: "Nybroplan",       // Returhållplats att markera för cityriktning
+        maxVisibleDepartures: 7,           // Standardantal synliga avgångar per hållplats
+        dataPaths: {                       // Sökvägar till konfigurationsfiler
             sjoConfig: './data/ressel-sjo-config.json',
             cityConfig: './data/ressel-city-config.json'
         },
-        debug: false                     // Aktivera debugloggning
+        debug: false                       // Aktivera debugloggning
     };
+
+    // Flag för att spåra om app är nyligen uppdaterad
+    let isAppUpdated = false;
 
     /**
      * Förhindra caching av JSON-anrop genom att lägga till en timestamp som query parameter
-     * FIXAD: Säkerställer att URL:en konstrueras korrekt för GitHub Pages
      * 
      * @param {string} url - URL att lägga till cache-busting på
      * @returns {string} URL med cache-busting parameter
@@ -75,6 +64,66 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Returnera den kompletta URL:en som en sträng
         return bustedUrl.toString();
+    }
+
+    /**
+     * Kontrollerar om applikationens version har ändrats
+     * @returns {Promise<boolean>} Sant om en ny version har upptäckts
+     */
+    async function checkForUpdates() {
+        try {
+            // Hämta manifest.json för att jämföra versioner
+            const response = await fetch(addCacheBuster('./manifest.json'));
+            if (response.ok) {
+                const manifest = await response.json();
+                
+                // Jämför manifest.version med nuvarande config.version
+                if (manifest.version && manifest.version !== config.version) {
+                    debugLog(`Ny version upptäckt: Manifest=${manifest.version}, App=${config.version}`);
+                    return true;
+                }
+            }
+            return false;
+        } catch (error) {
+            console.error('Fel vid kontroll av uppdateringar:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Visar uppdateringsnotifieringen
+     */
+    function showUpdateNotification() {
+        const updateNotification = document.getElementById('update-notification');
+        if (updateNotification) {
+            updateNotification.style.display = 'block';
+        }
+    }
+
+    /**
+     * Rensar cachen och laddar om applikationen
+     */
+    function clearCacheAndReload() {
+        try {
+            if ('caches' in window) {
+                caches.keys().then(cacheNames => {
+                    return Promise.all(
+                        cacheNames.map(cacheName => {
+                            return caches.delete(cacheName);
+                        })
+                    );
+                }).then(() => {
+                    // Ladda om sidan efter att cacherna är rensade
+                    window.location.reload(true);
+                });
+            } else {
+                // Fallback om Caches API inte stöds
+                window.location.reload(true);
+            }
+        } catch (error) {
+            console.error('Fel vid rensning av cache:', error);
+            window.location.reload(true);
+        }
     }
 
     // Försök ladda konfiguration från URL-parametrar om de finns
@@ -115,7 +164,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     let timers = {
         displayUpdate: null,    // För 1-minuts uppdatering av visningen
         dataRefresh: null,      // För 30-minuters uppdatering av data
-        midnightCheck: null     // För kontroll av dagsbyte vid midnatt
+        midnightCheck: null,    // För kontroll av dagsbyte vid midnatt
+        versionCheck: null      // För kontroll av versionsuppdateringar
     };
 
     const timeHandler = new TimeHandler();
@@ -187,7 +237,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 localStorage.removeItem('sjostadsfarjetrafiken_settings');
             }
             
-            // Rensa URL-parametrar också
+            // Rensa URL-parametrar
             window.history.replaceState({}, document.title, window.location.pathname);
             
             // Stäng inställningspanelen om den är öppen
@@ -195,44 +245,17 @@ document.addEventListener('DOMContentLoaded', async function() {
                 closeSettingsPanel();
             }
             
-            // Återställ konfigurationen till standardvärden
-            config.showSjostadstrafiken = true;
-            config.showEmelietrafiken = true;
-            config.showBothDirections = true;
-            config.maxVisibleDepartures = 7;
-            config.highlightStop = "Lumabryggan";
-            config.cityHighlightStop = "Lumabryggan";
-            config.cityReturnStop = "Nybroplan";
-            config.showSpeechSynthesis = false; // Ändrad till false för att stänga av talsyntes som standard
-            config.showDisembarkOnly = true;
-            
-            // Uppdatera CSS-variabel
-            document.documentElement.style.setProperty('--visible-departures', config.maxVisibleDepartures);
-            
-            // Uppdatera visningen direkt utan att ladda om sidan
-            updateDisplay(true);
-            
-            // Visa bekräftelse
-            const appElement = document.getElementById('app');
-            const notification = document.createElement('div');
-            notification.className = 'notification';
-            notification.textContent = 'Inställningar återställda till standard.';
-            notification.style.backgroundColor = 'rgba(0, 255, 0, 0.2)';
-            notification.style.padding = '10px';
-            notification.style.marginBottom = '10px';
-            notification.style.borderRadius = '4px';
-            
-            // Lägg till notifieringen högst upp
-            if (appElement.firstChild) {
-                appElement.insertBefore(notification, appElement.firstChild);
-            } else {
-                appElement.appendChild(notification);
+            // Visa ett laddningsmeddelande
+            const loadingElement = document.getElementById('loading');
+            if (loadingElement) {
+                loadingElement.textContent = 'Återställer inställningar och laddar om...';
+                loadingElement.style.display = 'block';
             }
             
-            // Ta bort notifieringen efter 3 sekunder
+            // Rensa cacher och ladda om sidan
             setTimeout(() => {
-                notification.remove();
-            }, 3000);
+                clearCacheAndReload();
+            }, 500);
         } catch (error) {
             console.error('Fel vid återställning av inställningar:', error);
             
@@ -305,6 +328,11 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (savedSettings.showDisembarkOnly !== undefined && !urlHasParam('disembark')) {
                     config.showDisembarkOnly = savedSettings.showDisembarkOnly;
                 }
+                
+                // Kontrollera sparad version mot aktuell version för uppdateringsnotifiering
+                if (savedSettings.appVersion && savedSettings.appVersion !== config.version) {
+                    isAppUpdated = true;
+                }
             }
         } catch (error) {
             console.warn('Kunde inte ladda inställningar från localStorage:', error);
@@ -328,6 +356,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
             if (localStorage) {
                 const settings = {
+                    appVersion: config.version,
                     showSjostadstrafiken: config.showSjostadstrafiken,
                     showEmelietrafiken: config.showEmelietrafiken,
                     showBothDirections: config.showBothDirections,
@@ -336,7 +365,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                     cityHighlightStop: config.cityHighlightStop,
                     cityReturnStop: config.cityReturnStop,
                     showSpeechSynthesis: config.showSpeechSynthesis,
-                    showDisembarkOnly: config.showDisembarkOnly // Inkludera ny inställning
+                    showDisembarkOnly: config.showDisembarkOnly,
+                    lastUpdated: new Date().toISOString()
                 };
                 
                 localStorage.setItem('sjostadsfarjetrafiken_settings', JSON.stringify(settings));
@@ -407,6 +437,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Sätt standard baserat på skärmstorlek om ej specificerat i URL
             setDefaultDeparturesBasedOnScreenSize();
         }
+        
+        // Kontrollera för forceUpdate parameter - används för att tvinga om en uppdatering
+        if (urlParams.has('forceUpdate')) {
+            clearCacheAndReload();
+        }
     }
     
     /**
@@ -420,7 +455,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 config.maxVisibleDepartures = 4;
                 document.documentElement.style.setProperty('--visible-departures', 4);
             } else {
-                // Desktop standard, ändrat från 9 till 7
+                // Desktop standard
                 config.maxVisibleDepartures = 7;
                 document.documentElement.style.setProperty('--visible-departures', 7);
             }
@@ -682,6 +717,47 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
+     * Visar uppdateringsbanner i appen om en ny version är tillgänglig
+     */
+    function showUpdateBanner() {
+        if (isAppUpdated) {
+            const appElement = document.getElementById('app');
+            if (appElement) {
+                const banner = document.createElement('div');
+                banner.className = 'update-banner';
+                banner.setAttribute('role', 'alert');
+                
+                const content = document.createElement('div');
+                content.className = 'update-banner-content';
+                
+                const message = document.createElement('span');
+                message.textContent = `Ny version (${config.version}) är installerad!`;
+                
+                content.appendChild(message);
+                banner.appendChild(content);
+                
+                // Lägg till i början av appen
+                if (appElement.firstChild) {
+                    appElement.insertBefore(banner, appElement.firstChild);
+                } else {
+                    appElement.appendChild(banner);
+                }
+                
+                // Ta bort bannern efter 10 sekunder
+                setTimeout(() => {
+                    banner.style.opacity = '0';
+                    setTimeout(() => {
+                        banner.remove();
+                    }, 500);
+                }, 10000);
+                
+                // Återställ flaggan
+                isAppUpdated = false;
+            }
+        }
+    }
+
+    /**
      * Uppdaterar visningen med aktuell tidtabellsinformation
      * @param {boolean} forceUpdate - Tvinga uppdatering även om timerna inte har ändrats
      */
@@ -705,6 +781,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         appElement.innerHTML = '';
         const wrapper = renderer.createWrapper();
+
+        // Visa uppdateringsbanner om applikationen nyligen har uppdaterats
+        showUpdateBanner();
 
         if (!timetableData.today || !timetableData.today.sjo || !timetableData.today.city) {
             handleError(null, 'Ingen tidtabellsdata tillgänglig');
@@ -923,6 +1002,16 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         ]));
         
+        // Lägg till App-information sektion
+        panelContent.appendChild(createSettingsSection('App-information', [
+            {
+                type: 'info',
+                id: 'app-version-info',
+                label: 'Version:',
+                value: config.version
+            }
+        ]));
+        
         // Lägg till Bryggval för Sjöstadstrafiken-sektion om data är tillgänglig
         if (timetableData.today && timetableData.today.sjo && timetableData.today.sjo.departures) {
             const sjoStops = Object.keys(timetableData.today.sjo.departures || {});
@@ -1102,6 +1191,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                     item.options, 
                     item.onChange
                 );
+            } else if (item.type === 'info') {
+                settingItem = createInfoSetting(item.id, item.label, item.value);
             }
             
             if (settingItem) {
@@ -1178,6 +1269,31 @@ document.addEventListener('DOMContentLoaded', async function() {
         container.appendChild(select);
         return container;
     }
+    
+    /**
+     * Skapar ett informationselement för inställningspanelen
+     * @param {string} id - Element-ID
+     * @param {string} label - Etikett
+     * @param {string} value - Värde att visa
+     * @returns {HTMLElement} Informationselementet
+     */
+    function createInfoSetting(id, label, value) {
+        const container = document.createElement('div');
+        container.className = 'setting-item info-container';
+        
+        const infoLabel = document.createElement('span');
+        infoLabel.className = 'info-label';
+        infoLabel.textContent = label;
+        
+        const infoValue = document.createElement('span');
+        infoValue.className = 'info-value';
+        infoValue.textContent = value;
+        infoValue.id = id;
+        
+        container.appendChild(infoLabel);
+        container.appendChild(infoValue);
+        return container;
+    }
 
     /**
      * Uppdaterar en URL-parameter utan att ladda om sidan
@@ -1220,8 +1336,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const infoElement = document.createElement("div");
                 infoElement.className = "validity-info";
                 infoElement.innerHTML = `Aktuell tidtabell gäller: ${validFrom.toLocaleDateString('sv-SE')} - ${validTo.toLocaleDateString('sv-SE')}`;
-                
-                // TA BORT senaste uppdateringstid
                 
                 wrapper.appendChild(infoElement);
             }
@@ -1550,16 +1664,33 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
+     * Kontrollerar efter versionsuppdateringar
+     */
+    async function checkForVersionUpdates() {
+        try {
+            const hasUpdates = await checkForUpdates();
+            
+            if (hasUpdates) {
+                showUpdateNotification();
+            }
+        } catch (error) {
+            console.error('Fel vid kontroll av versionsuppdateringar:', error);
+        }
+    }
+
+    /**
      * Startar alla uppdateringstimers
      * - displayUpdate: Uppdaterar visningen varje minut
      * - dataRefresh: Hämtar ny data från servern var 30:e minut
      * - midnightCheck: Kontrollerar om det är ett nytt dygn varje minut
+     * - versionCheck: Kontrollerar efter versionsuppdateringar varje timme
      */
     function startAllTimers() {
         // Avbryt eventuella existerande timers
         if (timers.displayUpdate) clearInterval(timers.displayUpdate);
         if (timers.dataRefresh) clearInterval(timers.dataRefresh);
         if (timers.midnightCheck) clearInterval(timers.midnightCheck);
+        if (timers.versionCheck) clearInterval(timers.versionCheck);
         
         // Starta ny timer för visningsuppdatering (varje minut)
         timers.displayUpdate = setInterval(() => {
@@ -1575,6 +1706,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         timers.midnightCheck = setInterval(() => {
             checkForMidnight();
         }, config.midnightCheckInterval);
+        
+        // Starta ny timer för versionskontroll (varje timme)
+        timers.versionCheck = setInterval(() => {
+            checkForVersionUpdates();
+        }, config.versionCheckInterval);
     }
 
     // Initialisera applikationen
@@ -1596,10 +1732,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Starta periodiska uppdateringar
             startAllTimers();
             
+            // Kontrollera efter versionsuppdateringar
+            checkForVersionUpdates();
+            
             // Lyssna på online/offline händelser för att hantera nätverksförändringar
             window.addEventListener('online', () => {
                 debugLog('Nätverk tillgängligt igen, uppdaterar data...');
                 loadAllTimetables();
+                checkForVersionUpdates();
             });
             
             // Lyssna på visibility change för att uppdatera när användaren kommer tillbaka till sidan
@@ -1607,8 +1747,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (document.visibilityState === 'visible') {
                     debugLog('Sidan aktiv igen, uppdaterar display...');
                     updateDisplay(true);
+                    checkForVersionUpdates();
                 }
             });
+            
+            // Spara aktuell version till localStorage
+            saveConfigToLocalStorage();
             
             debugLog('Applikationen initialiserades framgångsrikt');
         } catch (error) {

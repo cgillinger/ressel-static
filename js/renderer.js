@@ -6,25 +6,17 @@
  * highlight-effekter för avgångar.
  * 
  * Versionshistorik:
- * 7.5.0 (2025-04-05) - Förbättrad highlight-hantering, nu visas highlight även för morgondagens första avgång
- * 7.4.0 (2025-04-03) - Förbättrad talsyntes för "Endast avstigning" och "Snar avgång"
- * 7.3.0 (2025-04-01) - Flyttad position av högtalarikonerna till tidtabellstitel
- * 7.1.0 (2025-03-31) - Borttagen visning av dagtyp i tidtabelltitel
- * 7.0.4 (2025-03-31) - Fixad bugg med talsyntes-knappens placering och rendering
- * 7.0.2 (2025-03-31) - Fixad bugg med alla avgångar markerade som highlight
- * 7.0.1 (2025-03-31) - Fixad bugg med global Renderer-klass
- * 7.0.0 (2025-03-28) - Förbättrad dagsbaserad hantering av "Endast avstigning"-indikatorer
- * 6.0.0 (2025-03-26) - Refaktorerad för robust hantering av "Endast avstigning", förbättrad dokumentation
- * 5.1.0 (2025-03-25) - Tagit bort passerade avgångar från visningen; nästa avgång alltid först
- * 5.0.0 (2025-03-24) - Lagt till dagsbaserad tidsidentifiering för korrekt sortering
- * 4.0.0 (2025-03-21) - Fullständig omdesign med ny JSON-struktur för dagtypshantering
- * 3.0.0 (2025-03-20) - Lagt till stöd för separata dagtyper
- * 2.4.0 (2025-03-22) - Lagt till talsyntesfunktionalitet för tillgänglighet
- * 2.0.0 (2025-01-16) - Konverterad till statisk webbmodul
- * 1.0.0 (2024-01-11) - Originalversion baserad på MMM-Resseltrafiken
+ * 4.0.0 - Förbättrad versionshantering och uppdateringsnotifieringar
+ * 3.5.0 - Förbättrad highlight-hantering, visning av morgondagens första avgång
+ * 3.4.0 - Förbättrad talsyntes för "Endast avstigning" och "Snar avgång"
+ * 3.3.0 - Flyttad position av högtalarikonerna till tidtabellstitel
+ * 3.1.0 - Borttagen visning av dagtyp i tidtabelltitel
+ * 3.0.0 - Förbättrad dagsbaserad hantering av "Endast avstigning"-indikatorer
+ * 2.0.0 - Refaktorerad för robust hantering av "Endast avstigning"
+ * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 7.5.0
+ * @version 4.0.0
  * @license MIT
  */
 
@@ -51,6 +43,54 @@ class Renderer {
         const wrapper = document.createElement("div");
         wrapper.className = "MMM-Resseltrafiken";
         return wrapper;
+    }
+
+    /**
+     * Visar uppdateringsmeddelande
+     * @param {string} newVersion - Ny version tillgänglig
+     */
+    showUpdateNotification(newVersion) {
+        const notification = document.createElement("div");
+        notification.className = "update-banner";
+        notification.setAttribute("role", "alert");
+        
+        const content = document.createElement("div");
+        content.className = "update-banner-content";
+        
+        const message = document.createElement("span");
+        message.textContent = `Ny version (${newVersion}) tillgänglig!`;
+        
+        const updateButton = document.createElement("button");
+        updateButton.className = "update-button";
+        updateButton.textContent = "Uppdatera nu";
+        updateButton.addEventListener("click", () => {
+            // Rensa cache och ladda om sidan
+            if ('caches' in window) {
+                caches.keys().then(cacheNames => {
+                    Promise.all(
+                        cacheNames.map(cacheName => caches.delete(cacheName))
+                    ).then(() => {
+                        window.location.reload(true);
+                    });
+                });
+            } else {
+                window.location.reload(true);
+            }
+        });
+        
+        content.appendChild(message);
+        content.appendChild(updateButton);
+        notification.appendChild(content);
+        
+        // Lägg till notifikationen högst upp i appen
+        const appElement = document.getElementById("app");
+        if (appElement && appElement.firstChild) {
+            appElement.insertBefore(notification, appElement.firstChild);
+        } else if (appElement) {
+            appElement.appendChild(notification);
+        } else {
+            document.body.insertBefore(notification, document.body.firstChild);
+        }
     }
 
     /**
