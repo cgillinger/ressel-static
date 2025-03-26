@@ -897,7 +897,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const panelContent = document.createElement('div');
         panelContent.className = 'settings-content';
         
-        // Lägg till Tidtabellssektion
+        // 1. Lägg till Tidtabellssektion
         panelContent.appendChild(createSettingsSection('Tidtabeller', [
             {
                 type: 'toggle',
@@ -932,7 +932,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         ]));
         
-        // Lägg till M/S Emelie - Riktningar-sektion
+        // 2. Lägg till M/S Emelie - Riktningar-sektion
         const directionsSection = createSettingsSection('M/S Emelie - Riktningar', [
             {
                 type: 'toggle',
@@ -951,68 +951,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         directionsSection.style.display = config.showEmelietrafiken ? 'block' : 'none';
         panelContent.appendChild(directionsSection);
         
-        // Lägg till Visning-sektion med utökat intervall för avgångar
-        panelContent.appendChild(createSettingsSection('Visning', [
-            {
-                type: 'select',
-                id: 'maxdep-select',
-                label: 'Antal avgångar:',
-                value: config.maxVisibleDepartures,
-                options: Array.from({length: 13}, (_, i) => i + 3).map(num => ({
-                    value: num,
-                    text: num.toString()
-                })),
-                onChange: (value) => {
-                    const numValue = parseInt(value, 10);
-                    config.maxVisibleDepartures = numValue;
-                    document.documentElement.style.setProperty('--visible-departures', numValue);
-                    updateDisplay(true);
-                    updateURLParameter('maxdep', numValue.toString());
-                    saveConfigToLocalStorage();
-                }
-            },
-            // Lägg till inställning för "Endast avstigning"
-            {
-                type: 'toggle',
-                id: 'disembark-toggle',
-                label: 'Visa "Endast avstigning" indikator',
-                checked: config.showDisembarkOnly,
-                onChange: (checked) => {
-                    config.showDisembarkOnly = checked;
-                    updateDisplay(true);
-                    updateURLParameter('disembark', checked ? '1' : '0');
-                    saveConfigToLocalStorage();
-                }
-            }
-        ]));
-        
-        // Lägg till Tillgänglighet-sektion
-        panelContent.appendChild(createSettingsSection('Tillgänglighet', [
-            {
-                type: 'toggle',
-                id: 'speech-toggle',
-                label: 'Talsyntes för nästa avgång',
-                checked: config.showSpeechSynthesis,
-                onChange: (checked) => {
-                    config.showSpeechSynthesis = checked;
-                    updateDisplay(true);
-                    updateURLParameter('speech', checked ? '1' : '0');
-                    saveConfigToLocalStorage();
-                }
-            }
-        ]));
-        
-        // Lägg till App-information sektion
-        panelContent.appendChild(createSettingsSection('App-information', [
-            {
-                type: 'info',
-                id: 'app-version-info',
-                label: 'Version:',
-                value: config.version
-            }
-        ]));
-        
-        // Lägg till Bryggval för Sjöstadstrafiken-sektion om data är tillgänglig
+        // 3. Lägg till Bryggval för Sjöstadstrafiken-sektion om data är tillgänglig
         if (timetableData.today && timetableData.today.sjo && timetableData.today.sjo.departures) {
             const sjoStops = Object.keys(timetableData.today.sjo.departures || {});
             if (sjoStops.length > 0) {
@@ -1037,7 +976,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         }
         
-        // Lägg till Bryggval för M/S Emelie-sektion om data är tillgänglig
+        // 4. Lägg till Bryggval för M/S Emelie-sektion om data är tillgänglig
         if (timetableData.config && timetableData.config.city && timetableData.config.city.service_configuration) {
             const cityStops = timetableData.config.city.service_configuration.stop_sequence?.to_city || [];
             const fromCityStops = timetableData.config.city.service_configuration.stop_sequence?.from_city || [];
@@ -1079,6 +1018,67 @@ document.addEventListener('DOMContentLoaded', async function() {
                 ]));
             }
         }
+        
+        // 5. Lägg till Visning-sektion med utökat intervall för avgångar
+        panelContent.appendChild(createSettingsSection('Visning', [
+            {
+                type: 'select',
+                id: 'maxdep-select',
+                label: 'Antal avgångar:',
+                value: config.maxVisibleDepartures,
+                options: Array.from({length: 13}, (_, i) => i + 3).map(num => ({
+                    value: num,
+                    text: num.toString()
+                })),
+                onChange: (value) => {
+                    const numValue = parseInt(value, 10);
+                    config.maxVisibleDepartures = numValue;
+                    document.documentElement.style.setProperty('--visible-departures', numValue);
+                    updateDisplay(true);
+                    updateURLParameter('maxdep', numValue.toString());
+                    saveConfigToLocalStorage();
+                }
+            },
+            // Lägg till inställning för "Endast avstigning"
+            {
+                type: 'toggle',
+                id: 'disembark-toggle',
+                label: 'Visa "Endast avstigning" indikator',
+                checked: config.showDisembarkOnly,
+                onChange: (checked) => {
+                    config.showDisembarkOnly = checked;
+                    updateDisplay(true);
+                    updateURLParameter('disembark', checked ? '1' : '0');
+                    saveConfigToLocalStorage();
+                }
+            }
+        ]));
+        
+        // 6. Lägg till Tillgänglighet-sektion
+        panelContent.appendChild(createSettingsSection('Tillgänglighet', [
+            {
+                type: 'toggle',
+                id: 'speech-toggle',
+                label: 'Talsyntes för nästa avgång',
+                checked: config.showSpeechSynthesis,
+                onChange: (checked) => {
+                    config.showSpeechSynthesis = checked;
+                    updateDisplay(true);
+                    updateURLParameter('speech', checked ? '1' : '0');
+                    saveConfigToLocalStorage();
+                }
+            }
+        ]));
+        
+        // 7. Lägg till App-information sektion
+        panelContent.appendChild(createSettingsSection('App-information', [
+            {
+                type: 'info',
+                id: 'app-version-info',
+                label: 'Version:',
+                value: config.version
+            }
+        ]));
         
         settingsPanel.appendChild(panelContent);
         
@@ -1162,6 +1162,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             }, 300);
         }
     }
+    
+   // Här börjar del två
     
     /**
      * Skapar en inställningssektion med en titel och objekt
