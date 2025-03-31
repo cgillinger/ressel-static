@@ -8,6 +8,8 @@ En digital skyltlösning för att visa aktuella tidtabeller för båtlinjerna i 
 
 *[English instructions available below](#english)*
 
+Demo: https://cgillinger.github.io/ressel-static/
+
 ## Huvudfunktioner
 
 - Realtidsvisning av båtavgångar
