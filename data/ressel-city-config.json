@@ -1,10 +1,11 @@
 {
   "_metadata": {
-    "version": "6.0.0",
-    "last_updated": "2025-03-26",
+    "version": "7.0.0",
+    "last_updated": "2025-06-27",
     "data_sources": [
       "CITY LINE VINTER 2024/2025 (PDF)",
-      "CITY LINE VÅREN 2025 (PDF)"
+      "CITY LINE VÅREN 2025 (PDF)",
+      "CITY LINE SOMMAREN 2025 (PDF)"
     ],
     "update_cycle": "Timetables are updated seasonally",
     "validation_rules": [
@@ -68,12 +69,10 @@
         "afternoon_after": "18:44"
       },
       "saturday": {
-        "winter": ["13:14", "17:44"],
-        "spring": ["12:14", "12:44", "13:44", "17:44", "20:14"]
+        "summer": ["13:14", "19:14"]
       },
       "sunday": {
-        "winter": ["13:14", "17:44"],
-        "spring": ["12:14", "13:44", "17:44", "19:14"]
+        "summer": ["13:14", "18:14"]
       },
       "affected_stops": [
         "Barnängsbryggan",
@@ -115,6 +114,22 @@
       },
       "holiday_rules": {
         "weekend_schedule": ["2025-05-01", "2025-05-29", "2025-06-06"]
+      }
+    },
+    {
+      "name": "Summer 2025",
+      "period": {
+        "start": "2025-06-20",
+        "end": "2025-08-17",
+        "source": "City Line Summer PDF header 'SOMMAREN 2025 20 JUNI - 17 AUG'"
+      },
+      "files": {
+        "weekday": "ressel-city-summer-2025-weekday.json",
+        "saturday": "ressel-city-summer-2025-saturday.json",
+        "sunday": "ressel-city-summer-2025-sunday.json"
+      },
+      "holiday_rules": {
+        "weekend_schedule": ["2025-06-20", "2025-06-21"]
       }
     }
   ]

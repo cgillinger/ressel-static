@@ -1,18 +1,21 @@
 {
   "_metadata": {
-    "version": "4.0.0",
-    "last_updated": "2025-03-21",
+    "version": "5.0.0",
+    "last_updated": "2025-06-27",
     "data_sources": [
       "Avgångstider Barnängsbryggan (PDF)",
       "Avgångstider Lumabryggan (PDF)",
-      "Avgångstider Henriksdalsbryggan (PDF)"
+      "Avgångstider Henriksdalsbryggan (PDF)",
+      "Avgångstider Barnängsbryggan Sommartidtabell 2025 (PDF)",
+      "Avgångstider Lumabryggan Sommartidtabell 2025 (PDF)",
+      "Avgångstider Henriksdalsbryggan Sommartidtabell 2025 (PDF)"
     ],
     "calculation_systems": {
       "pattern": "Triangular route with 5 minute offset between stops",
       "base_calculation": "XX:00 (Barnäng) -> XX:05 (Luma) -> XX:10 (Henriksdal)",
       "intervals": {
-        "normal": "20 minutes between departures",
-        "rush_hour": "10 minutes during peak hours"
+        "summer": "20 minutes between departures (constant)",
+        "winter_spring": "20 minutes normal, 10 minutes during rush hour"
       }
     },
     "update_cycle": "Timetables are updated seasonally",
@@ -25,7 +28,7 @@
   "metadata": {
     "valid_period": {
       "start": "2024-08-19",
-      "end": "2025-06-20",
+      "end": "2025-08-17",
       "source": "PDF header dates"
     },
     "type": "free",
@@ -41,11 +44,13 @@
     "rush_hours": [
       {
         "period": "07:00-09:00",
-        "interval": 10
+        "interval": 10,
+        "seasons": ["winter", "spring"]
       },
       {
         "period": "15:50-18:00",
-        "interval": 10
+        "interval": 10,
+        "seasons": ["winter", "spring"]
       }
     ]
   },
@@ -59,6 +64,17 @@
       "files": {
         "weekday": "ressel-sjo-2024-2025-weekday.json",
         "weekend": "ressel-sjo-2024-2025-weekend.json"
+      }
+    },
+    {
+      "name": "Summer 2025",
+      "period": {
+        "start": "2025-06-21",
+        "end": "2025-08-17"
+      },
+      "files": {
+        "weekday": "ressel-sjo-summer-2025-weekday.json",
+        "weekend": "ressel-sjo-summer-2025-weekend.json"
       }
     }
   ]
