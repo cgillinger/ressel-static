@@ -1,11 +1,12 @@
 {
   "_metadata": {
-    "version": "7.0.0",
+    "version": "8.0.0",
     "last_updated": "2025-06-27",
     "data_sources": [
       "CITY LINE VINTER 2024/2025 (PDF)",
       "CITY LINE VÅREN 2025 (PDF)",
-      "CITY LINE SOMMAREN 2025 (PDF)"
+      "CITY LINE SOMMAREN 2025 (PDF)",
+      "CITY LINE HÖSTEN 2025 (PDF)"
     ],
     "update_cycle": "Timetables are updated seasonally",
     "validation_rules": [
@@ -69,10 +70,10 @@
         "afternoon_after": "18:44"
       },
       "saturday": {
-        "summer": ["13:14", "19:14"]
+        "fall": ["12:14", "13:44", "17:44", "20:14"]
       },
       "sunday": {
-        "summer": ["13:14", "18:14"]
+        "fall": ["12:14", "13:44", "17:44", "18:14"]
       },
       "affected_stops": [
         "Barnängsbryggan",
@@ -130,6 +131,22 @@
       },
       "holiday_rules": {
         "weekend_schedule": ["2025-06-20", "2025-06-21"]
+      }
+    },
+    {
+      "name": "Fall 2025",
+      "period": {
+        "start": "2025-08-18",
+        "end": "2025-09-21",
+        "source": "City Line Fall PDF header 'HÖSTEN 2025 18 AUG - 21 SEPT'"
+      },
+      "files": {
+        "weekday": "ressel-city-fall-2025-weekday.json",
+        "saturday": "ressel-city-fall-2025-saturday.json",
+        "sunday": "ressel-city-fall-2025-sunday.json"
+      },
+      "holiday_rules": {
+        "weekend_schedule": []
       }
     }
   ]
