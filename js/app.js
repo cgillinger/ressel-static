@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @type {Object}
      */
     const config = {
-        version: '4.0.0',                  // Applikationsversion (uppdatera vid varje ny version)
+        version: '4.1.0',                  // Applikationsversion (uppdatera vid varje ny version)
         updateInterval: 60000,             // Uppdateringsintervall i millisekunder (1 minut)
         dataRefreshInterval: 1800000,      // Uppdatera data från server var 30:e minut
         midnightCheckInterval: 60000,      // Kontrollera midnatt var minut

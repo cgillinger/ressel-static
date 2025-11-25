@@ -3,13 +3,14 @@
  * Caches application assets for offline functionality
  * 
  * Version History:
+ * 4.1.0 - Maintenance mode support + force update on version change
  * 4.0.0 - Förbättrad versionshantering och automatisk uppdatering
  * 3.0.0 - Förbättrad felhantering i fetch-event, fixad headers-kontroll
  * 2.0.0 - Förbättrad cachehantering för JSON-filer
  * 1.0.0 - Original service worker
  */
 
-const APP_VERSION = '4.0.0';
+const APP_VERSION = '4.1.0';
 const CACHE_NAME = `resseltrafiken-v${APP_VERSION}`;
 const JSON_CACHE_NAME = `resseltrafiken-json-v${APP_VERSION}`;
 
