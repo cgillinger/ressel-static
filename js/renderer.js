@@ -6,6 +6,7 @@
  * highlight-effekter för avgångar.
  * 
  * Versionshistorik:
+ * 4.1.0 - Tillagd support för maintenance mode (tillfälliga trafikuppehåll)
  * 4.0.0 - Förbättrad versionshantering och uppdateringsnotifieringar
  * 3.5.0 - Förbättrad highlight-hantering, visning av morgondagens första avgång
  * 3.4.0 - Förbättrad talsyntes för "Endast avstigning" och "Snar avgång"
@@ -16,7 +17,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 4.0.0
+ * @version 4.1.0
  * @license MIT
  */
 
@@ -110,8 +111,19 @@ class Renderer {
         // Lägg till titel (utan undertitel) och talsyntes-knapp om aktiverad
         timetable.appendChild(this.createTitleSection(title, timetableData, highlightStop, disembarkOnlyToday, disembarkOnlyTomorrow));
         
+        // Kontrollera om detta är maintenance mode
+        if (timetableData && timetableData.metadata && timetableData.metadata.maintenance_mode) {
+            // Visa maintenance-meddelande istället för tidtabell
+            const maintenanceMessage = document.createElement("div");
+            maintenanceMessage.className = "notification warning";
+            maintenanceMessage.style.marginTop = "15px";
+            maintenanceMessage.textContent = timetableData.metadata.maintenance_message || "Linjen har tillfälligt uppehåll i trafiken.";
+            timetable.appendChild(maintenanceMessage);
+            return timetable;
+        }
+        
         // Kolla om det finns avgångar att visa
-        if (timetableData && timetableData.departures) {
+        if (timetableData && timetableData.departures && Object.keys(timetableData.departures).length > 0) {
             const hasDisembarkOnlyTimes = this.hasDisembarkOnlyTimes(disembarkOnlyToday, disembarkOnlyTomorrow);
             
             // Tidrubriker

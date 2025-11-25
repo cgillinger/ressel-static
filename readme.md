@@ -191,6 +191,74 @@ Föra tt uppdatera eller skapa nya tidtabeller:
 
 Exempel på formattering av tidtabellsfiler finns i avsnittet om datastruktur.
 
+### Hantering av trafikuppehåll (Maintenance Mode)
+
+För perioder då trafiken tillfälligt är inställd (t.ex. på grund av broarbeten, service, eller andra planerade uppehåll) kan du använda maintenance-läget:
+
+#### Skapa maintenance-tidtabeller
+
+1. Skapa tre JSON-filer med tomt innehåll:
+   - `data/ressel-city-maintenance-ÅÅÅÅ-weekday.json`
+   - `data/ressel-city-maintenance-ÅÅÅÅ-saturday.json`
+   - `data/ressel-city-maintenance-ÅÅÅÅ-sunday.json`
+
+2. Format för maintenance-filer:
+   ```json
+   {
+     "metadata": {
+       "valid_period": {
+         "start": "ÅÅÅÅ-MM-DD",
+         "end": "ÅÅÅÅ-MM-DD"
+       },
+       "day_type": "weekday",
+       "maintenance_mode": true,
+       "maintenance_message": "Ditt meddelande här. Välkomna åter DD månad ÅÅÅÅ!"
+     },
+     "to_city": {
+       "operating_hours": {
+         "start": "00:00",
+         "end": "00:00"
+       },
+       "departures": {}
+     },
+     "from_city": {
+       "operating_hours": {
+         "start": "00:00",
+         "end": "00:00"
+       },
+       "departures": {}
+     },
+     "disembark_only": {
+       "from_city": {}
+     }
+   }
+   ```
+
+3. Uppdatera `data/ressel-city-config.json` med maintenance-perioden:
+   ```json
+   {
+     "name": "Maintenance [Beskrivning]",
+     "period": {
+       "start": "ÅÅÅÅ-MM-DD",
+       "end": "ÅÅÅÅ-MM-DD"
+     },
+     "files": {
+       "weekday": "ressel-city-maintenance-ÅÅÅÅ-weekday.json",
+       "saturday": "ressel-city-maintenance-ÅÅÅÅ-saturday.json",
+       "sunday": "ressel-city-maintenance-ÅÅÅÅ-sunday.json"
+     },
+     "maintenance_mode": true
+   }
+   ```
+
+**Resultat:** Under maintenance-perioden kommer Sjöstadstrafiken fortsätta visas normalt, medan M/S Emelie istället visar ditt anpassade meddelande istället för tidtabellen.
+
+**Exempel:**
+```
+M/S Emelie → City
+Linjen har tillfälligt uppehåll på grund av broarbeten. Välkomna åter 13 december 2025!
+```
+
 ## Projektstruktur
 ```
 sjostadsfärjetrafiken/
@@ -399,6 +467,74 @@ To update or creating new timetables:
 5. Verify that stop names and departure times are formatted exactly the same across all files
 
 Examples of timetable file formatting can be found in the data structure section.
+
+### Handling Service Interruptions (Maintenance Mode)
+
+For periods when service is temporarily suspended (e.g., due to bridge work, maintenance, or other planned interruptions), you can use maintenance mode:
+
+#### Create maintenance timetables
+
+1. Create three JSON files with empty content:
+   - `data/ressel-city-maintenance-YYYY-weekday.json`
+   - `data/ressel-city-maintenance-YYYY-saturday.json`
+   - `data/ressel-city-maintenance-YYYY-sunday.json`
+
+2. Format for maintenance files:
+   ```json
+   {
+     "metadata": {
+       "valid_period": {
+         "start": "YYYY-MM-DD",
+         "end": "YYYY-MM-DD"
+       },
+       "day_type": "weekday",
+       "maintenance_mode": true,
+       "maintenance_message": "Your message here. Welcome back DD Month YYYY!"
+     },
+     "to_city": {
+       "operating_hours": {
+         "start": "00:00",
+         "end": "00:00"
+       },
+       "departures": {}
+     },
+     "from_city": {
+       "operating_hours": {
+         "start": "00:00",
+         "end": "00:00"
+       },
+       "departures": {}
+     },
+     "disembark_only": {
+       "from_city": {}
+     }
+   }
+   ```
+
+3. Update `data/ressel-city-config.json` with the maintenance period:
+   ```json
+   {
+     "name": "Maintenance [Description]",
+     "period": {
+       "start": "YYYY-MM-DD",
+       "end": "YYYY-MM-DD"
+     },
+     "files": {
+       "weekday": "ressel-city-maintenance-YYYY-weekday.json",
+       "saturday": "ressel-city-maintenance-YYYY-saturday.json",
+       "sunday": "ressel-city-maintenance-YYYY-sunday.json"
+     },
+     "maintenance_mode": true
+   }
+   ```
+
+**Result:** During the maintenance period, Sjöstadstrafiken will continue to display normally, while M/S Emelie will show your custom message instead of the timetable.
+
+**Example:**
+```
+M/S Emelie → City
+Service temporarily suspended due to bridge work. Welcome back December 13, 2025!
+```
 
 ## Project Structure
 ```

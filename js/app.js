@@ -1524,7 +1524,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Skicka tomt som dayTypeText för att inte visa det
             wrapper.appendChild(
                 renderer.createTimetable(
-                    { departures: processedToCity },
+                    { 
+                        departures: processedToCity,
+                        metadata: cityData.metadata  // Lägg till metadata här!
+                    },
                     "M/S Emelie → City",
                     "", // Tomt istället för dayTypeText
                     config.cityHighlightStop,
@@ -1583,7 +1586,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Skicka tomt som dayTypeText för att inte visa det
             wrapper.appendChild(
                 renderer.createTimetable(
-                    { departures: processedFromCity },
+                    { 
+                        departures: processedFromCity,
+                        metadata: cityData.metadata  // Lägg till metadata här!
+                    },
                     "M/S Emelie ← City",
                     "", // Tomt istället för dayTypeText
                     config.cityReturnStop,
