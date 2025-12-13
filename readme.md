@@ -4,563 +4,362 @@
 
 ![Sjöstadsfärjetrafiken med meny för personliga inställningar](images/screenshot2.png)
 
-En digital skyltlösning för att visa aktuella tidtabeller för båtlinjerna i Hammarby Sjöstad: Sjöstadstrafiken och M/S Emelie.
+En modern webbapplikation för att visa realtidstidtabeller för båtlinjerna i Hammarby Sjöstad: Sjöstadstrafiken och M/S Emelie.
 
-*[English instructions available below](#english)*
+**Demo:** https://cgillinger.github.io/ressel-static/
 
-Demo: https://cgillinger.github.io/ressel-static/
+## Funktioner
 
-## Huvudfunktioner
+- **Realtidsvisning** - Avgångar uppdateras automatiskt varje minut
+- **Smart tidmarkering:**
+  - 🟢 Grön ram = Nästa avgång (mer än 10 minuter)
+  - 🟡 Gul ram = Snar avgång (mindre än 10 minuter)
+  - *Kursiv text* = Morgondagens första avgångar
+- **Flexibel visning** - Anpassa antal avgångar och vilka linjer som visas
+- **Brygganpassning** - Markera din brygga för snabb översikt
+- **Mörkt tema** - Perfekt för digital skyltning
+- **Offline-stöd** - Fungerar även utan internetuppkoppling
+- **Mobilvänlig** - Installeras som app på telefon/surfplatta
+- **Helgdagshantering** - Byter automatiskt till helgtidtabell
 
-- Realtidsvisning av båtavgångar
-- Korrekt hantering av byte mellan vardagstidtabell och helgtidtabell
-- Tydliga färgkodade indikatorer:
-  - Grön ram: Nästa avgång (>10 minuter)
-  - Gul ram: Snar avgång (<10 minuter)
-  - Kursiv text: Morgondagens avgångar
-- Hamburger-meny med inställningar för anpassning
-- Automatisk anpassning för mobilskärmar
-- Automatisk hantering av svenska helgdagar
-- Uppdateras varje minut
-- Fungerar på alla skärmstorlekar
-- Mörkt tema som standard (perfekt för digitala skyltar)
-- Kan installeras som app på mobil/surfplatta
-- Fungerar även offline
-- Omfattande felhantering
+## Kom igång
 
-## Installation för digital skyltlösning
+### Enkel start
+1. Gå till https://cgillinger.github.io/ressel-static/
+2. Klart! 🎉
 
-### Grundinstallation
-1. Ladda ner senaste versionen
-2. Extrahera filerna till valfri mapp
-3. Starta genom att öppna index.html i en webbläsare
+### Lokal installation
+1. Ladda ner/klona detta repo
+2. Öppna `index.html` i webbläsaren
+3. Klart!
 
 ### För digital skyltning
-1. Installera en webbläsare på din skärmenhet (Chrome, Firefox, Edge)
-2. Konfigurera webbläsaren för kioskmodus/fullskärm
-3. Ställ in automatisk start av webbläsaren vid uppstart
-4. Peka webbläsaren mot index.html, eller använd en lokal webbserver
-
-### Rekommenderade webblösningar för digital signage
-- **Raspberry Pi**: Använd Chromium i kioskmodus
-- **Android-surfplatta**: Installera som PWA (lägg till på hemskärmen)
-- **Windows-dator**: Använd Chrome i kioskmodus + automatisk start
-- **Smart TV med webbläsare**: Öppna sidan direkt i TV:ns webbläsare
-
-## Inställningar och anpassning
-
-### Användning av inställningspanelen
-Klicka på "Inställningar" längst ner på sidan för att öppna inställningspanelen. Här kan du:
-
-1. **Tidtabeller**: Visa/dölj Sjöstadstrafiken och M/S Emelie
-2. **Riktningar**: Visa/dölj returresor för M/S Emelie (synligt när M/S Emelie är aktiverad)
-3. **Visning**: Ändra antal avgångar som visas (3-15)
-4. **Bryggor**: Välja vilka bryggor som ska markeras för respektive linje
-
-Dina inställningar sparas automatiskt mellan besök i webbläsaren.
-
-### Anpassning via URL-parametrar
-Du kan anpassa visningen genom att lägga till parametrar i URL:en:
-
-```
-index.html?sjo=1&emelie=1&bothdir=1&highlight=Lumabryggan&maxdep=6
+**Raspberry Pi:**
+```bash
+chromium-browser --kiosk --noerrdialogs --disable-infobars index.html
 ```
 
-Tillgängliga parametrar:
-- `sjo=1` eller `sjo=0`: Visa/dölj Sjöstadstrafiken
-- `emelie=1` eller `emelie=0`: Visa/dölj M/S Emelie
-- `bothdir=1` eller `bothdir=0`: Visa/dölj returresor för M/S Emelie
-- `highlight=Bryggnamn`: Markera specifik brygga för Sjöstadstrafiken
-- `cityhighlight=Bryggnamn`: Markera specifik brygga för M/S Emelie
-- `returnstop=Bryggnamn`: Markera specifik brygga för returtrafik
-- `maxdep=X`: Ange antal avgångar som ska visas (X = 3 till 15)
-
-### Exempel på URL-konfigurationer
-
-1. **Endast Sjöstadstrafiken**  
-   `index.html?sjo=1&emelie=0`
-
-2. **Endast M/S Emelie utan returresor**  
-   `index.html?sjo=0&emelie=1&bothdir=0`
-
-3. **Båda linjerna med Barnängsbryggan markerad och fler avgångar**  
-   `index.html?sjo=1&emelie=1&highlight=Barnängsbryggan&maxdep=12`
-
-4. **Mobiloptimerad visning**  
-   `index.html?maxdep=5`
-
-## Tidtabeller och datastruktur
-
-Applikationen använder en **förenklad filstruktur** (version 5.0.0) med generiska tidtabellsfiler som återanvänds över flera säsonger:
-
-### Konfigurationsfiler
-Dessa innehåller metadata och pekar mot rätt tidtabellsfiler:
-
-- **`data/ressel-sjo-config.json`**: Huvudkonfiguration för Sjöstadstrafiken
-- **`data/ressel-city-config.json`**: Huvudkonfiguration för M/S Emelie (City-linjen)
-
-### Tidtabellsfiler
-Version 5.0.0 använder endast **5 generiska filer** istället för 24:
-
-#### Sjöstadstrafiken (3 filer)
-- **`data/ressel-sjo-weekday-standard.json`**: Vardagar med rusningstidstrafik (används höst/vinter/vår)
-- **`data/ressel-sjo-weekday-summer.json`**: Sommarvardagar utan rusningstidstrafik
-- **`data/ressel-sjo-weekend.json`**: Helger (identisk för alla säsonger)
-
-#### M/S Emelie City-linjen (2 filer)
-- **`data/ressel-city-weekday-winter.json`**: Vardagar (återanvänds för vinter/vår/höst)
-- **`data/ressel-city-weekend-winter.json`**: Helger (återanvänds för vinter/vår/höst)
-
-**Fördelar med ny struktur:**
-- 50% färre filer att underhålla
-- Enklare uppdateringar - ändra en fil, påverkar flera säsonger
-- Tydligare filnamn som beskriver innehåll istället för säsong
-- Samma funktionalitet för användaren
-
-### Metadatastruktur
-
-#### Konfigurationsfiler
-Konfigurationsfilerna innehåller:
-- Versionsinformation och uppdateringsdatum
-- Metadata om priser, anteckningar och särskilda regler
-- Stationsordning och annan servicekonfiguration
-- Säsongsmappning som knyter datum till rätt tidtabellsfiler
-- Helgdagsregler
-
-Exempel på säsongsmappning från `ressel-city-config.json`:
-```json
-"season_mapping": [
-  {
-    "name": "Winter 2025-2026",
-    "period": {
-      "start": "2025-12-15",
-      "end": "2026-04-19"
-    },
-    "files": {
-      "weekday": "ressel-city-weekday-winter.json",
-      "saturday": "ressel-city-weekend-winter.json",
-      "sunday": "ressel-city-weekend-winter.json"
-    },
-    "holiday_rules": {
-      "no_traffic": ["2025-12-24", "2025-12-25", "2025-12-26", "2025-12-31", "2026-01-01"],
-      "weekend_schedule": ["2026-01-06"]
-    }
-  }
-]
+**Windows (Chrome):**
+```
+chrome.exe --kiosk --app=file:///C:/path/to/index.html
 ```
 
-#### Tidtabellsfiler
-Tidtabellsfilerna innehåller:
-- Grundläggande metadata (giltighetsperiod, dagtyp)
-- Avgångstider för olika hållplatser
-- Eventuella särregler för specifika tider
+**Android/iOS:**
+1. Öppna sidan i webbläsaren
+2. Tryck "Lägg till på hemskärmen"
+3. Appen installeras som native app
 
-## Uppdatering av tidtabeller
+## Anpassa applikationen
 
-### Lägg till en ny säsong
-Med den nya strukturen behöver du **inte skapa nya filer** för varje säsong, bara uppdatera konfigurationen:
+### Via inställningsmenyn
+Klicka på **"Inställningar"** längst ner:
 
-1. Kontrollera om befintliga generiska filer kan återanvändas
-2. Om tidtabellen är identisk med en tidigare säsong, **återanvänd samma fil**
-3. Uppdatera endast `ressel-city-config.json` eller `ressel-sjo-config.json` med ny säsongsmappning
+1. **Tidtabeller** - Välj vilka linjer som ska visas
+2. **Visning** - Ändra antal avgångar (3-15 st)
+3. **Bryggor** - Markera din hemmabrygga
+4. **Riktningar** - Visa/dölj returresor för M/S Emelie
 
-**Exempel - lägga till sommar 2026:**
+💡 *Dina val sparas automatiskt i webbläsaren*
 
-```json
-{
-  "name": "Summer 2026",
-  "period": {
-    "start": "2026-06-20",
-    "end": "2026-08-16"
-  },
-  "files": {
-    "weekday": "ressel-city-weekday-summer.json",
-    "saturday": "ressel-city-weekend-summer.json",
-    "sunday": "ressel-city-weekend-summer.json"
-  }
-}
-```
-
-### När ska nya tidtabellsfiler skapas?
-
-Skapa **bara** nya filer om:
-- Avgångstiderna är **olika** från alla befintliga generiska filer
-- Det är en helt ny trafiktyp (t.ex. nattbuss, expresslinje)
-
-**Namnkonvention för nya filer:**
-- `ressel-[linje]-[typ]-[variant].json`
-- Exempel: `ressel-city-weekday-summer.json`
-
-### Hantering av trafikuppehåll (Maintenance Mode)
-
-För perioder då trafiken tillfälligt är inställd (t.ex. på grund av broarbeten, service, eller andra planerade uppehåll) kan du använda maintenance-läget:
-
-#### Skapa maintenance-tidtabeller
-
-1. Skapa tre JSON-filer med tomt innehåll:
-   - `data/ressel-city-maintenance-ÅÅÅÅ-weekday.json`
-   - `data/ressel-city-maintenance-ÅÅÅÅ-saturday.json`
-   - `data/ressel-city-maintenance-ÅÅÅÅ-sunday.json`
-
-2. Format för maintenance-filer:
-   ```json
-   {
-     "metadata": {
-       "valid_period": {
-         "start": "ÅÅÅÅ-MM-DD",
-         "end": "ÅÅÅÅ-MM-DD"
-       },
-       "day_type": "weekday",
-       "maintenance_mode": true,
-       "maintenance_message": "Ditt meddelande här. Välkomna åter DD månad ÅÅÅÅ!"
-     },
-     "to_city": {
-       "operating_hours": {
-         "start": "00:00",
-         "end": "00:00"
-       },
-       "departures": {}
-     },
-     "from_city": {
-       "operating_hours": {
-         "start": "00:00",
-         "end": "00:00"
-       },
-       "departures": {}
-     },
-     "disembark_only": {
-       "from_city": {}
-     }
-   }
-   ```
-
-3. Uppdatera `data/ressel-city-config.json` med maintenance-perioden:
-   ```json
-   {
-     "name": "Maintenance [Beskrivning]",
-     "period": {
-       "start": "ÅÅÅÅ-MM-DD",
-       "end": "ÅÅÅÅ-MM-DD"
-     },
-     "files": {
-       "weekday": "ressel-city-maintenance-ÅÅÅÅ-weekday.json",
-       "saturday": "ressel-city-maintenance-ÅÅÅÅ-saturday.json",
-       "sunday": "ressel-city-maintenance-ÅÅÅÅ-sunday.json"
-     },
-     "maintenance_mode": true
-   }
-   ```
-
-**Resultat:** Under maintenance-perioden kommer Sjöstadstrafiken fortsätta visas normalt, medan M/S Emelie istället visar ditt anpassade meddelande istället för tidtabellen.
+### Via URL-parametrar
+Perfekt för digital skyltning med fasta inställningar:
 
 **Exempel:**
 ```
-M/S Emelie → City
-Linjen har tillfälligt uppehåll på grund av broarbeten. Välkomna åter 13 december 2025!
+index.html?sjo=1&emelie=1&highlight=Lumabryggan&maxdep=8
 ```
 
-## Projektstruktur
+**Alla parametrar:**
 ```
-sjostadsfärjetrafiken/
-├── index.html              # Main page
-├── css/
-│   └── styles.css          # Styling
-├── js/
-│   ├── app.js              # Main logic, loads configurations and timetables
-│   ├── timehandler.js      # Handles time calculations and formatting
-│   └── renderer.js         # Renders UI with departures
-├── data/
-│   ├── ressel-sjo-config.json              # Sjöstadstrafiken configuration
-│   ├── ressel-city-config.json             # M/S Emelie configuration
-│   ├── ressel-sjo-weekday-standard.json    # Sjöstadstrafiken weekdays (rush hour)
-│   ├── ressel-sjo-weekday-summer.json      # Sjöstadstrafiken summer weekdays
-│   ├── ressel-sjo-weekend.json             # Sjöstadstrafiken weekends (all seasons)
-│   ├── ressel-city-weekday-winter.json     # M/S Emelie weekdays (winter/spring/fall)
-│   ├── ressel-city-weekend-winter.json     # M/S Emelie weekends (winter/spring/fall)
-│   └── [plus seasonal files for spring/summer/fall as needed]
-├── icons/
-│   └── boat.png            # App icon
-└── manifest.json           # PWA configuration
+sjo=1/0              Visa/dölj Sjöstadstrafiken
+emelie=1/0           Visa/dölj M/S Emelie
+bothdir=1/0          Visa/dölj returresor
+highlight=Brygga     Markera brygga (Sjöstadstrafiken)
+cityhighlight=Brygga Markera brygga till city (M/S Emelie)
+returnstop=Brygga    Markera brygga från city (M/S Emelie)
+maxdep=3-15          Antal avgångar att visa
 ```
 
-## Licens
-MIT License
-
-## Utvecklare
-Christian Gillinger  
-[GitHub](https://github.com/cgillinger)
-
----
-
-<a name="english"></a>
-# Sjöstadsfärjetrafiken (Stockholm Harbor Ferry Timetables)
-
-A digital signage solution for displaying current timetables for the boat lines in Hammarby Sjöstad, Stockholm: Sjöstadstrafiken and M/S Emelie.
-
-![Settings menu for personal customization](images/screenshot2.png)
-
-## Key Features
-
-- Real-time boat departure display
-- Correct handling of switching between weekday and weekend timetables
-- Clear color-coded indicators:
-  - Green border: Next departure (>10 minutes)
-  - Yellow border: Imminent departure (<10 minutes)
-  - Italic text: Next day departures
-- Hamburger menu with settings for customization
-- Automatic mobile screen adaptation
-- Automatic Swedish holiday handling
-- Updates every minute
-- Works on all screen sizes
-- Dark theme by default (perfect for digital signage)
-- Can be installed as an app on mobile/tablet
-- Works offline
-- Comprehensive error handling
-
-## Installation for Digital Signage
-
-### Basic Installation
-1. Download the latest version
-2. Extract files to any folder
-3. Start by opening index.html in a web browser
-
-### For Digital Signage
-1. Install a web browser on your display device (Chrome, Firefox, Edge)
-2. Configure the browser for kiosk mode/fullscreen
-3. Set up automatic browser launch at startup
-4. Point the browser to index.html, or use a local web server
-
-### Recommended Web Solutions for Digital Signage
-- **Raspberry Pi**: Use Chromium in kiosk mode
-- **Android tablet**: Install as PWA (add to home screen)
-- **Windows PC**: Use Chrome in kiosk mode + auto-start
-- **Smart TV with browser**: Open the page directly in the TV's browser
-
-## Settings and Customization
-
-### Using the Settings Panel
-Click on "Settings" at the bottom of the page to open the settings panel. Here you can:
-
-1. **Timetables**: Show/hide Sjöstadstrafiken and M/S Emelie
-2. **Directions**: Show/hide return trips for M/S Emelie (visible when M/S Emelie is enabled)
-3. **Display**: Change the number of departures shown (3-15)
-4. **Stops**: Choose which stops to highlight for each line
-
-Your settings are automatically saved between sessions in the browser.
-
-### Customization via URL Parameters
-You can customize the display by adding parameters to the URL:
+**Användningsexempel:**
 
 ```
-index.html?sjo=1&emelie=1&bothdir=1&highlight=Lumabryggan&maxdep=6
+Endast Sjöstadstrafiken:
+?sjo=1&emelie=0
+
+Endast M/S Emelie utan returresor:
+?sjo=0&emelie=1&bothdir=0
+
+Barnängsbryggan fokus med många avgångar:
+?highlight=Barnängsbryggan&maxdep=12
+
+Mobilanpassad:
+?maxdep=5
 ```
 
-Available parameters:
-- `sjo=1` or `sjo=0`: Show/hide Sjöstadstrafiken
-- `emelie=1` or `emelie=0`: Show/hide M/S Emelie
-- `bothdir=1` or `bothdir=0`: Show/hide return trips for M/S Emelie
-- `highlight=StopName`: Highlight specific stop for Sjöstadstrafiken
-- `cityhighlight=StopName`: Highlight specific stop for M/S Emelie
-- `returnstop=StopName`: Highlight specific stop for return traffic
-- `maxdep=X`: Set number of departures to show (X = 3 to 15)
+## Hur det fungerar
 
-## Timetables and Data Structure
+### Datastruktur
+Applikationen använder en smart filstruktur där tidtabeller återanvänds mellan säsonger:
 
-The application uses a **simplified file structure** (version 5.0.0) with generic timetable files that are reused across multiple seasons:
+```
+data/
+├── ressel-sjo-config.json              ← Konfiguration Sjöstadstrafiken
+├── ressel-city-config.json             ← Konfiguration M/S Emelie
+├── ressel-sjo-weekday-standard.json    ← Vardagar (höst/vinter/vår)
+├── ressel-sjo-weekday-summer.json      ← Sommarvardagar
+├── ressel-sjo-weekend.json             ← Helger (alla säsonger)
+├── ressel-city-weekday-winter.json     ← Vardagar (vinter/vår/höst)
+└── ressel-city-weekend-winter.json     ← Helger (vinter/vår/höst)
+```
 
-### Configuration Files
-These contain metadata and point to the correct timetable files:
+**Fördelar:**
+- Bara 7 filer istället för 24+
+- En uppdatering påverkar flera säsonger
+- Enklare att underhålla
 
-- **`data/ressel-sjo-config.json`**: Main configuration for Sjöstadstrafiken
-- **`data/ressel-city-config.json`**: Main configuration for M/S Emelie (City line)
+### Konfigurationsfiler
+`ressel-sjo-config.json` och `ressel-city-config.json` innehåller:
+- Säsongsmappning (datum → tidtabellsfil)
+- Helgdagsregler
+- Specialdagar
+- Metadata (priser, anteckningar)
 
-### Timetable Files
-Version 5.0.0 uses only **5 generic files** instead of 24:
-
-#### Sjöstadstrafiken (3 files)
-- **`data/ressel-sjo-weekday-standard.json`**: Weekdays with rush hour (used fall/winter/spring)
-- **`data/ressel-sjo-weekday-summer.json`**: Summer weekdays without rush hour
-- **`data/ressel-sjo-weekend.json`**: Weekends (identical for all seasons)
-
-#### M/S Emelie City Line (2 files)
-- **`data/ressel-city-weekday-winter.json`**: Weekdays (reused for winter/spring/fall)
-- **`data/ressel-city-weekend-winter.json`**: Weekends (reused for winter/spring/fall)
-
-**Benefits of new structure:**
-- 50% fewer files to maintain
-- Easier updates - change one file, affects multiple seasons
-- Clearer file names describing content instead of season
-- Same functionality for users
-
-### Metadata Structure
-
-#### Configuration Files
-Configuration files contain:
-- Version information and update date
-- Metadata about prices, notes, and special rules
-- Station sequence and other service configuration
-- Season mapping linking dates to the correct timetable files
-- Holiday rules
-
-Example of season mapping from `ressel-city-config.json`:
+**Exempel från config:**
 ```json
-"season_mapping": [
-  {
-    "name": "Winter 2025-2026",
-    "period": {
+{
+  "name": "Winter 2025-2026",
+  "period": {
+    "start": "2025-12-15",
+    "end": "2026-04-19"
+  },
+  "files": {
+    "weekday": "ressel-city-weekday-winter.json",
+    "saturday": "ressel-city-weekend-winter.json",
+    "sunday": "ressel-city-weekend-winter.json"
+  },
+  "holiday_rules": {
+    "no_traffic": ["2025-12-24", "2025-12-25"],
+    "weekend_schedule": ["2026-01-06"]
+  }
+}
+```
+
+### Tidtabellsfiler
+Enkelt JSON-format:
+```json
+{
+  "metadata": {
+    "valid_period": {
       "start": "2025-12-15",
       "end": "2026-04-19"
     },
-    "files": {
-      "weekday": "ressel-city-weekday-winter.json",
-      "saturday": "ressel-city-weekend-winter.json",
-      "sunday": "ressel-city-weekend-winter.json"
-    },
-    "holiday_rules": {
-      "no_traffic": ["2025-12-24", "2025-12-25", "2025-12-26", "2025-12-31", "2026-01-01"],
-      "weekend_schedule": ["2026-01-06"]
-    }
+    "day_type": "weekday"
+  },
+  "operating_hours": {
+    "start": "06:00",
+    "end": "00:00"
+  },
+  "departures": {
+    "Barnängsbryggan": ["06:00", "06:20", "06:40", ...],
+    "Lumabryggan": ["06:05", "06:25", "06:45", ...],
+    "Henriksdalsbryggan": ["06:10", "06:30", "06:50", ...]
   }
-]
+}
 ```
 
-#### Timetable Files
-Timetable files contain:
-- Basic metadata (validity period, day type)
-- Departure times for different stops
-- Any special rules for specific times
+## Uppdatera tidtabeller
 
-## Updating Timetables
+### Lägg till ny säsong
+De flesta säsonger kan återanvända befintliga filer:
 
-### Adding a New Season
-With the new structure you **don't need to create new files** for each season, just update the configuration:
+**1. Kontrollera om tidtabellen är identisk med tidigare säsong**
 
-1. Check if existing generic files can be reused
-2. If the timetable is identical to a previous season, **reuse the same file**
-3. Only update `ressel-city-config.json` or `ressel-sjo-config.json` with new season mapping
-
-**Example - adding summer 2026:**
-
+**2. Uppdatera bara config-filen:**
 ```json
 {
   "name": "Summer 2026",
   "period": {
     "start": "2026-06-20",
-    "end": "2026-08-16"
+    "end": "2026-08-17"
   },
   "files": {
-    "weekday": "ressel-city-weekday-summer.json",
-    "saturday": "ressel-city-weekend-summer.json",
-    "sunday": "ressel-city-weekend-summer.json"
+    "weekday": "ressel-sjo-weekday-summer.json",    ← Återanvänd
+    "weekend": "ressel-sjo-weekend.json"            ← Återanvänd
   }
 }
 ```
 
-### When to Create New Timetable Files
+**3. Klart!** 🎉
 
-Create new files **only** if:
-- Departure times are **different** from all existing generic files
-- It's a completely new traffic type (e.g., night bus, express line)
+### Skapa ny tidtabellsfil
+Endast nödvändigt om avgångstider är **annorlunda** än alla befintliga filer:
 
-**Naming convention for new files:**
-- `ressel-[line]-[type]-[variant].json`
-- Example: `ressel-city-weekday-summer.json`
-
-### Handling Service Interruptions (Maintenance Mode)
-
-For periods when service is temporarily suspended (e.g., due to bridge work, maintenance, or other planned interruptions), you can use maintenance mode:
-
-#### Create maintenance timetables
-
-1. Create three JSON files with empty content:
-   - `data/ressel-city-maintenance-YYYY-weekday.json`
-   - `data/ressel-city-maintenance-YYYY-saturday.json`
-   - `data/ressel-city-maintenance-YYYY-sunday.json`
-
-2. Format for maintenance files:
-   ```json
-   {
-     "metadata": {
-       "valid_period": {
-         "start": "YYYY-MM-DD",
-         "end": "YYYY-MM-DD"
-       },
-       "day_type": "weekday",
-       "maintenance_mode": true,
-       "maintenance_message": "Your message here. Welcome back DD Month YYYY!"
-     },
-     "to_city": {
-       "operating_hours": {
-         "start": "00:00",
-         "end": "00:00"
-       },
-       "departures": {}
-     },
-     "from_city": {
-       "operating_hours": {
-         "start": "00:00",
-         "end": "00:00"
-       },
-       "departures": {}
-     },
-     "disembark_only": {
-       "from_city": {}
-     }
-   }
-   ```
-
-3. Update `data/ressel-city-config.json` with the maintenance period:
-   ```json
-   {
-     "name": "Maintenance [Description]",
-     "period": {
-       "start": "YYYY-MM-DD",
-       "end": "YYYY-MM-DD"
-     },
-     "files": {
-       "weekday": "ressel-city-maintenance-YYYY-weekday.json",
-       "saturday": "ressel-city-maintenance-YYYY-saturday.json",
-       "sunday": "ressel-city-maintenance-YYYY-sunday.json"
-     },
-     "maintenance_mode": true
-   }
-   ```
-
-**Result:** During the maintenance period, Sjöstadstrafiken will continue to display normally, while M/S Emelie will show your custom message instead of the timetable.
-
-**Example:**
-```
-M/S Emelie → City
-Service temporarily suspended due to bridge work. Welcome back December 13, 2025!
+**1. Kopiera en liknande fil**
+```bash
+cp ressel-sjo-weekday-standard.json ressel-sjo-weekday-newtype.json
 ```
 
-## Project Structure
+**2. Uppdatera avgångstider och metadata**
+
+**3. Lägg till i config:**
+```json
+"files": {
+  "weekday": "ressel-sjo-weekday-newtype.json"
+}
+```
+
+### Trafikuppehåll (Maintenance Mode)
+För tillfälliga stopp (broarbeten, service):
+
+**1. Skapa maintenance-filer:**
+```json
+{
+  "metadata": {
+    "valid_period": {
+      "start": "2026-03-01",
+      "end": "2026-03-15"
+    },
+    "day_type": "weekday",
+    "maintenance_mode": true,
+    "maintenance_message": "Trafiken är tillfälligt inställd. Välkomna åter 16 mars!"
+  },
+  "to_city": { "departures": {} },
+  "from_city": { "departures": {} }
+}
+```
+
+**2. Uppdatera config:**
+```json
+{
+  "name": "Maintenance March 2026",
+  "period": {
+    "start": "2026-03-01",
+    "end": "2026-03-15"
+  },
+  "files": {
+    "weekday": "ressel-city-maintenance-2026-weekday.json",
+    "saturday": "ressel-city-maintenance-2026-saturday.json",
+    "sunday": "ressel-city-maintenance-2026-sunday.json"
+  },
+  "maintenance_mode": true
+}
+```
+
+**Resultat:** Istället för tidtabell visas meddelandet! ✅
+
+## Projektstruktur
+
 ```
 sjostadsfärjetrafiken/
-├── index.html              # Main page
+├── index.html                 Huvudsida
+├── manifest.json              PWA-konfiguration
+├── service-worker.js          Offline-stöd
 ├── css/
-│   └── styles.css          # Styling
+│   └── styles.css             Alla stilar
 ├── js/
-│   ├── app.js              # Main logic, loads configurations and timetables
-│   ├── timehandler.js      # Handles time calculations and formatting
-│   └── renderer.js         # Renders UI with departures
+│   ├── app.js                 Huvudlogik
+│   ├── timehandler.js         Tidsberäkningar
+│   └── renderer.js            UI-rendering
 ├── data/
-│   ├── ressel-sjo-config.json              # Sjöstadstrafiken configuration
-│   ├── ressel-city-config.json             # M/S Emelie configuration
-│   ├── ressel-sjo-weekday-standard.json    # Sjöstadstrafiken weekdays (rush hour)
-│   ├── ressel-sjo-weekday-summer.json      # Sjöstadstrafiken summer weekdays
-│   ├── ressel-sjo-weekend.json             # Sjöstadstrafiken weekends (all seasons)
-│   ├── ressel-city-weekday-winter.json     # M/S Emelie weekdays (winter/spring/fall)
-│   ├── ressel-city-weekend-winter.json     # M/S Emelie weekends (winter/spring/fall)
-│   └── [plus seasonal files for spring/summer/fall as needed]
-├── icons/
-│   └── boat.png            # App icon
-└── manifest.json           # PWA configuration
+│   ├── *.json                 Tidtabeller och konfiguration
+└── icons/
+    └── boat.png               App-ikon
 ```
 
-## License
-MIT License
+## Teknisk dokumentation
 
-## Developer
-Christian Gillinger  
-[GitHub](https://github.com/cgillinger)
+### Versionshantering
+Filer som måste uppdateras vid ny version:
+
+1. **manifest.json** - `"version": "X.Y.Z"`
+2. **index.html** - `<meta name="version" content="X.Y.Z">`
+3. **service-worker.js** - `const APP_VERSION = 'X.Y.Z'`
+4. **js/app.js** - `version: 'X.Y.Z'`
+
+### Service Worker Cache
+Vid uppdatering:
+1. Öka versionsnummer
+2. Service worker skapar nytt cache
+3. Gamla cacher rensas automatiskt
+4. Användare ser uppdateringsnotis
+
+### PWA-funktioner
+- Offline-stöd via service worker
+- Installeras som app på mobil/desktop
+- Automatiska uppdateringar
+- Fast installerad ikon
+
+## Felsökning
+
+**Uppdateringar visas inte:**
+```
+1. Öppna DevTools (F12)
+2. Application → Clear storage → Clear site data
+3. Håll Ctrl+Shift+R (hard reload)
+```
+
+**Fel tidtabell visas:**
+```
+Kontrollera datum i config-filerna:
+- period.start och period.end
+- Överlappande perioder?
+```
+
+**Appen fungerar inte offline:**
+```
+Kontrollera service worker:
+DevTools → Application → Service Workers
+Status ska vara "activated and running"
+```
+
+## Utveckling
+
+### Lokalt
+```bash
+# Klona repo
+git clone https://github.com/cgillinger/ressel-static.git
+cd ressel-static
+
+# Starta lokal server (valfritt)
+python3 -m http.server 8000
+
+# Öppna http://localhost:8000
+```
+
+### Deployment
+```bash
+# Uppdatera versionsnummer i alla filer
+# Committa ändringar
+git add .
+git commit -m "Version X.Y.Z: Beskrivning"
+git push
+
+# GitHub Pages uppdateras automatiskt
+```
+
+## Bidra
+
+Pull requests välkomna! För större ändringar, öppna först en issue.
+
+### Rapportera buggar
+Använd GitHub Issues: https://github.com/cgillinger/ressel-static/issues
+
+Inkludera:
+- Webbläsare och version
+- Steg för att återskapa
+- Förväntad vs faktisk funktion
+- Skärmdump om relevant
+
+## Licens
+
+MIT License - Se LICENSE-fil för detaljer
+
+## Utvecklare
+
+**Christian Gillinger**  
+GitHub: [@cgillinger](https://github.com/cgillinger)
+
+---
+
+**Version:** 5.0.0  
+**Senast uppdaterad:** December 2025
