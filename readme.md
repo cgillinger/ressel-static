@@ -33,6 +33,69 @@ En modern webbapplikation för att visa realtidstidtabeller för båtlinjerna i 
 2. Öppna `index.html` i webbläsaren
 3. Klart!
 
+### Egen server/hosting
+Applikationen är helt statisk och fungerar på vilken webbserver som helst:
+
+**Apache:**
+```bash
+# Kopiera filerna till webbroot
+sudo cp -r ressel-static /var/www/html/farjetrafiken
+
+# Se till att filerna är läsbara
+sudo chmod -R 755 /var/www/html/farjetrafiken
+
+# Besök: http://din-server/farjetrafiken
+```
+
+**Nginx:**
+```nginx
+server {
+    listen 80;
+    server_name farjetrafiken.example.com;
+    root /var/www/farjetrafiken;
+    index index.html;
+    
+    location / {
+        try_files $uri $uri/ =404;
+    }
+    
+    # Cache-headers för tidtabellsfiler
+    location ~* \.json$ {
+        add_header Cache-Control "no-cache, must-revalidate";
+    }
+}
+```
+
+**Python (enkel testserver):**
+```bash
+cd ressel-static
+python3 -m http.server 8000
+
+# Besök: http://localhost:8000
+```
+
+**Node.js (http-server):**
+```bash
+npm install -g http-server
+cd ressel-static
+http-server -p 8000
+
+# Besök: http://localhost:8000
+```
+
+**Docker:**
+```dockerfile
+FROM nginx:alpine
+COPY . /usr/share/nginx/html
+EXPOSE 80
+```
+```bash
+docker build -t farjetrafiken .
+docker run -p 8080:80 farjetrafiken
+```
+
+💡 **Viktigt:** Service worker kräver HTTPS i produktion (lokalt funkar HTTP)
+
 ### För digital skyltning
 **Raspberry Pi:**
 ```bash
@@ -48,6 +111,13 @@ chrome.exe --kiosk --app=file:///C:/path/to/index.html
 1. Öppna sidan i webbläsaren
 2. Tryck "Lägg till på hemskärmen"
 3. Appen installeras som native app
+
+**iPhone (Safari):**
+1. Öppna https://cgillinger.github.io/ressel-static/ i Safari
+2. Tryck på delningsknappen (📤) längst ner
+3. Scrolla ner och välj "Lägg till på hemskärmen"
+4. Bekräfta genom att trycka "Lägg till"
+5. Appen syns nu som en vanlig app på hemskärmen 🎉
 
 ## Anpassa applikationen
 
