@@ -6,18 +6,12 @@
  * highlight-effekter för avgångar.
  * 
  * Versionshistorik:
+ * 4.2.0 - Tillagd varning för utgångna tidtabeller med utgångsdatum
  * 4.1.0 - Tillagd support för maintenance mode (tillfälliga trafikuppehåll)
  * 4.0.0 - Förbättrad versionshantering och uppdateringsnotifieringar
- * 3.5.0 - Förbättrad highlight-hantering, visning av morgondagens första avgång
- * 3.4.0 - Förbättrad talsyntes för "Endast avstigning" och "Snar avgång"
- * 3.3.0 - Flyttad position av högtalarikonerna till tidtabellstitel
- * 3.1.0 - Borttagen visning av dagtyp i tidtabelltitel
- * 3.0.0 - Förbättrad dagsbaserad hantering av "Endast avstigning"-indikatorer
- * 2.0.0 - Refaktorerad för robust hantering av "Endast avstigning"
- * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 4.1.0
+ * @version 4.2.0
  * @license MIT
  */
 
@@ -96,20 +90,41 @@ class Renderer {
 
     /**
      * Skapar en tidtabellsvy
+     * UPPDATERAD: Hanterar nu utgångna tidtabeller
      * @param {Object} timetableData - Tidtabellsdata
      * @param {string} title - Tidtabellstitel
      * @param {string} subtitle - Tidtabellsundertitel (används inte längre)
      * @param {string} highlightStop - Hållplats att markera
      * @param {Object} disembarkOnlyToday - "Endast avstigning"-tider för idag
      * @param {Object} disembarkOnlyTomorrow - "Endast avstigning"-tider för imorgon
+     * @param {boolean} isExpired - Om tidtabellen har gått ut
+     * @param {string} expiryDate - Datum när tidtabellen gick ut (YYYY-MM-DD format)
      * @returns {HTMLElement} Tidtabellselement
      */
-    createTimetable(timetableData, title, subtitle, highlightStop, disembarkOnlyToday, disembarkOnlyTomorrow) {
+    createTimetable(timetableData, title, subtitle, highlightStop, disembarkOnlyToday, disembarkOnlyTomorrow, isExpired = false, expiryDate = null) {
         const timetable = document.createElement("div");
         timetable.className = "timetable";
         
         // Lägg till titel (utan undertitel) och talsyntes-knapp om aktiverad
         timetable.appendChild(this.createTitleSection(title, timetableData, highlightStop, disembarkOnlyToday, disembarkOnlyTomorrow));
+        
+        // Visa varning om tidtabellen är utgången
+        if (isExpired && expiryDate) {
+            const expiryWarning = document.createElement("div");
+            expiryWarning.className = "notification warning";
+            expiryWarning.style.marginTop = "10px";
+            expiryWarning.style.marginBottom = "15px";
+            
+            const expDate = new Date(expiryDate);
+            const formattedDate = expDate.toLocaleDateString('sv-SE', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            expiryWarning.innerHTML = `⚠️ Denna tidtabell gick ut ${formattedDate}. Tiderna nedan kan vara inaktuella.`;
+            timetable.appendChild(expiryWarning);
+        }
         
         // Kontrollera om detta är maintenance mode
         if (timetableData && timetableData.metadata && timetableData.metadata.maintenance_mode) {

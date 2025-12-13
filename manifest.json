@@ -2,7 +2,7 @@
   "name": "Sjöstadsfärjetrafiken",
   "short_name": "Sjöstadsfärjer",
   "description": "Tidtabeller för Sjöstadstrafiken och M/S Emelie båtlinjer i Stockholm",
-  "version": "4.1.0",
+  "version": "5.0.0",
   "author": "Christian Gillinger",
   "start_url": "./",
   "display": "standalone",

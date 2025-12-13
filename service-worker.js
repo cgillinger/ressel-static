@@ -3,6 +3,7 @@
  * Caches application assets for offline functionality
  * 
  * Version History:
+ * 5.0.0 - Simplified timetable structure (50% fewer files)
  * 4.1.0 - Maintenance mode support + force update on version change
  * 4.0.0 - Förbättrad versionshantering och automatisk uppdatering
  * 3.0.0 - Förbättrad felhantering i fetch-event, fixad headers-kontroll
@@ -10,7 +11,7 @@
  * 1.0.0 - Original service worker
  */
 
-const APP_VERSION = '4.1.0';
+const APP_VERSION = '5.0.0';
 const CACHE_NAME = `resseltrafiken-v${APP_VERSION}`;
 const JSON_CACHE_NAME = `resseltrafiken-json-v${APP_VERSION}`;
 
@@ -27,17 +28,31 @@ const STATIC_FILES_TO_CACHE = [
 ];
 
 // JSON-filer som behöver hanteras med "network-first" strategi
+// Version 5.0.0: Simplified structure with generic files
 const JSON_FILES = [
   './data/ressel-sjo-config.json',
   './data/ressel-city-config.json',
-  './data/ressel-sjo-2024-2025-weekday.json',
-  './data/ressel-sjo-2024-2025-weekend.json',
-  './data/ressel-city-winter-2024-2025-weekday.json',
-  './data/ressel-city-winter-2024-2025-saturday.json',
-  './data/ressel-city-winter-2024-2025-sunday.json',
+  './data/ressel-sjo-weekday-standard.json',
+  './data/ressel-sjo-weekday-summer.json',
+  './data/ressel-sjo-weekend.json',
+  './data/ressel-city-weekday-winter.json',
+  './data/ressel-city-weekend-winter.json',
+  // Legacy files still referenced by old configs (for backward compatibility)
   './data/ressel-city-spring-2025-weekday.json',
   './data/ressel-city-spring-2025-saturday.json',
-  './data/ressel-city-spring-2025-sunday.json'
+  './data/ressel-city-spring-2025-sunday.json',
+  './data/ressel-city-summer-2025-weekday.json',
+  './data/ressel-city-summer-2025-saturday.json',
+  './data/ressel-city-summer-2025-sunday.json',
+  './data/ressel-city-fall-2025-weekday.json',
+  './data/ressel-city-fall-2025-saturday.json',
+  './data/ressel-city-fall-2025-sunday.json',
+  './data/ressel-city-fall-extended-2025-weekday.json',
+  './data/ressel-city-fall-extended-2025-saturday.json',
+  './data/ressel-city-fall-extended-2025-sunday.json',
+  './data/ressel-city-maintenance-2025-weekday.json',
+  './data/ressel-city-maintenance-2025-saturday.json',
+  './data/ressel-city-maintenance-2025-sunday.json'
 ];
 
 // Check for version mismatch
@@ -76,11 +91,24 @@ self.addEventListener('install', (event) => {
         return cache.addAll(STATIC_FILES_TO_CACHE);
       })
       .then(() => {
-        // Pre-cache JSON files as fallback
+        // Pre-cache JSON files as fallback (only attempt, don't fail if missing)
         return caches.open(JSON_CACHE_NAME)
           .then((jsonCache) => {
             console.log('Pre-caching JSON files for offline use');
-            return jsonCache.addAll(JSON_FILES);
+            // Try to cache each file individually, ignore 404s
+            return Promise.allSettled(
+              JSON_FILES.map(file => 
+                fetch(file)
+                  .then(response => {
+                    if (response.ok) {
+                      return jsonCache.put(file, response);
+                    }
+                  })
+                  .catch(() => {
+                    // Ignore missing files silently
+                  })
+              )
+            );
           });
       })
       .then(() => {

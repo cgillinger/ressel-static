@@ -6,6 +6,8 @@
  * och hanterar applikationens övergripande livscykel.
  * 
  * Versionshistorik:
+ * 4.2.0 - Hanterar utgångna tidtabeller genom att visa dem med varning
+ * 4.1.0 - Tillagd support för maintenance mode
  * 4.0.0 - Förbättrad versionshantering, automatisk uppdatering, och reload vid reset
  * 3.3.0 - Ta bort "Senaste uppdatering"-text, ändra standardvärde för talsyntes
  * 3.2.0 - Fixad bugg med Återställ-knappen
@@ -15,7 +17,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 4.0.0
+ * @version 4.2.0
  * @license MIT
  */
 
@@ -25,7 +27,7 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @type {Object}
      */
     const config = {
-        version: '4.1.0',                  // Applikationsversion (uppdatera vid varje ny version)
+        version: '4.2.0',                  // Applikationsversion (uppdatera vid varje ny version)
         updateInterval: 60000,             // Uppdateringsintervall i millisekunder (1 minut)
         dataRefreshInterval: 1800000,      // Uppdatera data från server var 30:e minut
         midnightCheckInterval: 60000,      // Kontrollera midnatt var minut
@@ -142,6 +144,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             disembarkOnly: {
                 toCity: null,
                 fromCity: null
+            },
+            isExpired: {
+                sjo: false,
+                city: false
+            },
+            expiryDate: {
+                sjo: null,
+                city: null
             }
         },
         tomorrow: {
@@ -602,59 +612,98 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     /**
      * Bestämmer vilka tidtabellsfiler som ska användas baserat på aktuellt datum och konfiguration
+     * UPPDATERAD: Returnerar nu även om tidtabellen är utgången och när den gick ut
      * @param {Object} configData - Konfigurationsdata
      * @param {Date} date - Datum att bestämma schema för
-     * @returns {Object} Ett objekt med sökvägar att använda för varje tjänst och dagtyp
+     * @returns {Object} Ett objekt med sökvägar, utgångsstatus och datum
      */
     function determineTimetableFiles(configData, date) {
         const result = {
             sjo: null,
-            city: null
+            city: null,
+            sjoExpired: false,
+            cityExpired: false,
+            sjoExpiryDate: null,
+            cityExpiryDate: null
         };
 
         try {
-            // Bestäm dagtyp - OBS: Använder DayOfWeek istället för isHoliday
+            // Bestäm dagtyp
             const dayOfWeek = date.getDay();
             const isSaturday = dayOfWeek === 6;
             const isSunday = dayOfWeek === 0;
             const dayType = isSaturday ? "saturday" : (isSunday ? "sunday" : "weekday");
 
             // Hitta lämplig Sjöstadstrafiken-tidtabellfil
+            let sjoSeason = null;
+            let sjoLatestSeason = null;
+            
             for (const season of configData.sjo.season_mapping) {
                 const seasonStart = new Date(season.period.start);
                 const seasonEnd = new Date(season.period.end);
                 
+                // Spara senaste säsongen vi hittar
+                if (!sjoLatestSeason || seasonEnd > new Date(sjoLatestSeason.period.end)) {
+                    sjoLatestSeason = season;
+                }
+                
                 if (date >= seasonStart && date <= seasonEnd) {
-                    // För Sjöstadstrafiken, hantera helg annorlunda (bara weekday/weekend)
-                    if (dayType === "saturday" || dayType === "sunday") {
-                        result.sjo = season.files.weekend;
-                    } else {
-                        result.sjo = season.files.weekday;
-                    }
+                    sjoSeason = season;
                     break;
                 }
             }
+            
+            // Använd hittad säsong eller senaste tillgängliga
+            if (sjoSeason) {
+                result.sjo = dayType === "saturday" || dayType === "sunday" ? 
+                    sjoSeason.files.weekend : sjoSeason.files.weekday;
+                result.sjoExpired = false;
+            } else if (sjoLatestSeason) {
+                // Tidtabellen har gått ut - använd senaste tillgängliga
+                result.sjo = dayType === "saturday" || dayType === "sunday" ? 
+                    sjoLatestSeason.files.weekend : sjoLatestSeason.files.weekday;
+                result.sjoExpired = true;
+                result.sjoExpiryDate = sjoLatestSeason.period.end;
+            }
 
             // Hitta lämplig Citylinje-tidtabellfil
+            let citySeason = null;
+            let cityLatestSeason = null;
+            
             for (const season of configData.city.season_mapping) {
                 const seasonStart = new Date(season.period.start);
                 const seasonEnd = new Date(season.period.end);
                 
+                // Spara senaste säsongen vi hittar
+                if (!cityLatestSeason || seasonEnd > new Date(cityLatestSeason.period.end)) {
+                    cityLatestSeason = season;
+                }
+                
                 if (date >= seasonStart && date <= seasonEnd) {
                     // Kontrollera om aktuellt datum är en helgdag som ska använda helgschema
                     if (season.holiday_rules && season.holiday_rules.weekend_schedule) {
-                        const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+                        const dateStr = date.toISOString().split('T')[0];
                         if (season.holiday_rules.weekend_schedule.includes(dateStr)) {
-                            // Om det är en helgdag, använd söndagsschemat
                             result.city = season.files.sunday;
+                            result.cityExpired = false;
                             return result;
                         }
                     }
                     
-                    // Normal dagtypsval
-                    result.city = season.files[dayType];
+                    citySeason = season;
                     break;
                 }
+            }
+            
+            // Använd hittad säsong eller senaste tillgängliga
+            if (citySeason) {
+                result.city = citySeason.files[dayType];
+                result.cityExpired = false;
+            } else if (cityLatestSeason) {
+                // Tidtabellen har gått ut - använd senaste tillgängliga
+                result.city = cityLatestSeason.files[dayType] || cityLatestSeason.files.weekday;
+                result.cityExpired = true;
+                result.cityExpiryDate = cityLatestSeason.period.end;
             }
 
             return result;
@@ -666,9 +715,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     /**
      * Laddar och validerar tidtabellsdata för en specifik dag
+     * UPPDATERAD: Hanterar nu även utgångna tidtabeller
      * @param {Object} configData - Konfigurationsdata
      * @param {Date} date - Datum att ladda tidtabell för
-     * @returns {Promise<Object>} Den parsade och validerade tidtabellsdatan
+     * @returns {Promise<Object>} Den parsade och validerade tidtabellsdatan med utgångsstatus
      */
     async function loadTimetableForDate(configData, date) {
         try {
@@ -708,6 +758,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                 disembarkOnly: {
                     toCity: disembarkOnlyToCity || {},
                     fromCity: disembarkOnlyFromCity || {}
+                },
+                isExpired: {
+                    sjo: timetableFiles.sjoExpired,
+                    city: timetableFiles.cityExpired
+                },
+                expiryDate: {
+                    sjo: timetableFiles.sjoExpiryDate,
+                    city: timetableFiles.cityExpiryDate
                 }
             };
         } catch (error) {
@@ -1163,8 +1221,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
     
-   // Här börjar del två
-    
     /**
      * Skapar en inställningssektion med en titel och objekt
      * @param {string} title - Sektionstitel
@@ -1376,6 +1432,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     function renderSjostadsTimetable(wrapper) {
         const sjoData = timetableData.today.sjo;
         const sjoTomorrow = timetableData.tomorrow.sjo;
+        const isExpired = timetableData.today.isExpired.sjo;
+        const expiryDate = timetableData.today.expiryDate.sjo;
         
         if (sjoData && sjoData.departures) {
             const dayTypeText = sjoData.metadata.day_type === 'weekday' ? 'Vardagar' : 'Helgtrafik';
@@ -1403,16 +1461,18 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
 
             // Skicka tomt som dayTypeText för att inte visa det
-            wrapper.appendChild(
-                renderer.createTimetable(
-                    { departures: processedDepartures },
-                    "Sjöstadstrafiken",
-                    "", // Tomt istället för dayTypeText
-                    config.highlightStop,
-                    null,  // Inga "Endast avstigning" tider för Sjöstadstrafiken idag
-                    null   // Inga "Endast avstigning" tider för Sjöstadstrafiken imorgon
-                )
+            const timetable = renderer.createTimetable(
+                { departures: processedDepartures },
+                "Sjöstadstrafiken",
+                "", // Tomt istället för dayTypeText
+                config.highlightStop,
+                null,  // Inga "Endast avstigning" tider för Sjöstadstrafiken idag
+                null,  // Inga "Endast avstigning" tider för Sjöstadstrafiken imorgon
+                isExpired,
+                expiryDate
             );
+            
+            wrapper.appendChild(timetable);
         }
     }
 
@@ -1465,6 +1525,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     function renderEmelieTimetables(wrapper) {
         const cityData = timetableData.today.city;
         const cityTomorrow = timetableData.tomorrow.city;
+        const isExpired = timetableData.today.isExpired.city;
+        const expiryDate = timetableData.today.expiryDate.city;
         
         if (!cityData) return;
         
@@ -1522,19 +1584,21 @@ document.addEventListener('DOMContentLoaded', async function() {
             const disembarkOnlyToCityTomorrow = timetableData.tomorrow.disembarkOnly?.toCity || null;
 
             // Skicka tomt som dayTypeText för att inte visa det
-            wrapper.appendChild(
-                renderer.createTimetable(
-                    { 
-                        departures: processedToCity,
-                        metadata: cityData.metadata  // Lägg till metadata här!
-                    },
-                    "M/S Emelie → City",
-                    "", // Tomt istället för dayTypeText
-                    config.cityHighlightStop,
-                    disembarkOnlyToCityToday,    // Dagens "Endast avstigning" tider för TO_CITY
-                    disembarkOnlyToCityTomorrow  // Morgondagens "Endast avstigning" tider för TO_CITY
-                )
+            const toCityTable = renderer.createTimetable(
+                { 
+                    departures: processedToCity,
+                    metadata: cityData.metadata  // Lägg till metadata här!
+                },
+                "M/S Emelie → City",
+                "", // Tomt istället för dayTypeText
+                config.cityHighlightStop,
+                disembarkOnlyToCityToday,    // Dagens "Endast avstigning" tider för TO_CITY
+                disembarkOnlyToCityTomorrow, // Morgondagens "Endast avstigning" tider för TO_CITY
+                isExpired,
+                expiryDate
             );
+            
+            wrapper.appendChild(toCityTable);
         }
 
         // FROM CITY (om aktiverat)
@@ -1584,19 +1648,21 @@ document.addEventListener('DOMContentLoaded', async function() {
             const disembarkOnlyFromCityTomorrow = timetableData.tomorrow.disembarkOnly?.fromCity || null;
 
             // Skicka tomt som dayTypeText för att inte visa det
-            wrapper.appendChild(
-                renderer.createTimetable(
-                    { 
-                        departures: processedFromCity,
-                        metadata: cityData.metadata  // Lägg till metadata här!
-                    },
-                    "M/S Emelie ← City",
-                    "", // Tomt istället för dayTypeText
-                    config.cityReturnStop,
-                    disembarkOnlyFromCityToday,     // Dagens "Endast avstigning" tider för FROM_CITY
-                    disembarkOnlyFromCityTomorrow   // Morgondagens "Endast avstigning" tider för FROM_CITY
-                )
+            const fromCityTable = renderer.createTimetable(
+                { 
+                    departures: processedFromCity,
+                    metadata: cityData.metadata  // Lägg till metadata här!
+                },
+                "M/S Emelie ← City",
+                "", // Tomt istället för dayTypeText
+                config.cityReturnStop,
+                disembarkOnlyFromCityToday,     // Dagens "Endast avstigning" tider för FROM_CITY
+                disembarkOnlyFromCityTomorrow,  // Morgondagens "Endast avstigning" tider för FROM_CITY
+                isExpired,
+                expiryDate
             );
+            
+            wrapper.appendChild(fromCityTable);
         }
     }
 

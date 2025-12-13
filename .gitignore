@@ -1,44 +1,37 @@
-# Python virtual environment
-venv/
-env/
-ENV/
-.venv/
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-
-# Windows Zone.Identifier files (från WSL)
-*.Zone.Identifier
-
-# Backup files
-*.bak
-*.backup
-*~
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Logs
-*.log
-
-# Node modules (om du någonsin använder npm)
+# Dependencies
 node_modules/
-
-# Cache directories
-.cache/
+venv/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+
+# Backup files from migration
+data/backup_*
+
+# Windows Zone.Identifier files
+*:Zone.Identifier
+*.Zone.Identifier
+
+# Temporary files
+*.tmp
+*.bak
