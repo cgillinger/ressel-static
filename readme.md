@@ -109,13 +109,15 @@ data/
 ├── ressel-sjo-weekday-summer.json      ← Sommarvardagar
 ├── ressel-sjo-weekend.json             ← Helger (alla säsonger)
 ├── ressel-city-weekday-winter.json     ← Vardagar (vinter/vår/höst)
-└── ressel-city-weekend-winter.json     ← Helger (vinter/vår/höst)
+├── ressel-city-weekend-winter.json     ← Helger (vinter/vår/höst)
+└── ressel-city-maintenance-*.json      ← Tillfälliga trafikuppehåll (vid behov)
 ```
 
-**Fördelar:**
-- Bara 7 filer istället för 24+
-- En uppdatering påverkar flera säsonger
-- Enklare att underhålla
+**Varför smart:**
+- Samma tidtabell för vinter/vår/höst → färre filer att uppdatera
+- Ändra en fil → påverkar automatiskt alla säsonger som använder den
+- Mindre risk för fel och inkonsekvenser
+- Maintenance-filer används bara vid tillfälliga stopp (broarbeten osv.)
 
 ### Konfigurationsfiler
 `ressel-sjo-config.json` och `ressel-city-config.json` innehåller:
