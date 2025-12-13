@@ -91,7 +91,7 @@ Tillgängliga parametrar:
 
 ## Tidtabeller och datastruktur
 
-Applikationen använder en ny filstruktur som korrekt hanterar övergång mellan vardag och helg:
+Applikationen använder en **förenklad filstruktur** (version 5.0.0) med generiska tidtabellsfiler som återanvänds över flera säsonger:
 
 ### Konfigurationsfiler
 Dessa innehåller metadata och pekar mot rätt tidtabellsfiler:
@@ -100,19 +100,22 @@ Dessa innehåller metadata och pekar mot rätt tidtabellsfiler:
 - **`data/ressel-city-config.json`**: Huvudkonfiguration för M/S Emelie (City-linjen)
 
 ### Tidtabellsfiler
-Separata filer per säsong och dagtyp:
+Version 5.0.0 använder endast **5 generiska filer** istället för 24:
 
-#### Sjöstadstrafiken
-- **`data/ressel-sjo-2024-2025-weekday.json`**: Vardagstidtabell
-- **`data/ressel-sjo-2024-2025-weekend.json`**: Helgtidtabell (för både lördag och söndag)
+#### Sjöstadstrafiken (3 filer)
+- **`data/ressel-sjo-weekday-standard.json`**: Vardagar med rusningstidstrafik (används höst/vinter/vår)
+- **`data/ressel-sjo-weekday-summer.json`**: Sommarvardagar utan rusningstidstrafik
+- **`data/ressel-sjo-weekend.json`**: Helger (identisk för alla säsonger)
 
-#### M/S Emelie (City-linjen)
-- **`data/ressel-city-winter-2024-2025-weekday.json`**: Vardagstidtabell för vinter
-- **`data/ressel-city-winter-2024-2025-saturday.json`**: Lördagstidtabell för vinter
-- **`data/ressel-city-winter-2024-2025-sunday.json`**: Söndagstidtabell för vinter
-- **`data/ressel-city-spring-2025-weekday.json`**: Vardagstidtabell för vår
-- **`data/ressel-city-spring-2025-saturday.json`**: Lördagstidtabell för vår
-- **`data/ressel-city-spring-2025-sunday.json`**: Söndagstidtabell för vår
+#### M/S Emelie City-linjen (2 filer)
+- **`data/ressel-city-weekday-winter.json`**: Vardagar (återanvänds för vinter/vår/höst)
+- **`data/ressel-city-weekend-winter.json`**: Helger (återanvänds för vinter/vår/höst)
+
+**Fördelar med ny struktur:**
+- 50% färre filer att underhålla
+- Enklare uppdateringar - ändra en fil, påverkar flera säsonger
+- Tydligare filnamn som beskriver innehåll istället för säsong
+- Samma funktionalitet för användaren
 
 ### Metadatastruktur
 
@@ -128,18 +131,19 @@ Exempel på säsongsmappning från `ressel-city-config.json`:
 ```json
 "season_mapping": [
   {
-    "name": "Winter 2024-2025",
+    "name": "Winter 2025-2026",
     "period": {
-      "start": "2024-11-04",
-      "end": "2025-04-21"
+      "start": "2025-12-15",
+      "end": "2026-04-19"
     },
     "files": {
-      "weekday": "ressel-city-winter-2024-2025-weekday.json",
-      "saturday": "ressel-city-winter-2024-2025-saturday.json",
-      "sunday": "ressel-city-winter-2024-2025-sunday.json"
+      "weekday": "ressel-city-weekday-winter.json",
+      "saturday": "ressel-city-weekend-winter.json",
+      "sunday": "ressel-city-weekend-winter.json"
     },
     "holiday_rules": {
-      "weekend_schedule": ["2025-01-06", "2025-04-18"]
+      "no_traffic": ["2025-12-24", "2025-12-25", "2025-12-26", "2025-12-31", "2026-01-01"],
+      "weekend_schedule": ["2026-01-06"]
     }
   }
 ]
@@ -153,43 +157,39 @@ Tidtabellsfilerna innehåller:
 
 ## Uppdatering av tidtabeller
 
-### Lägg till en ny säsong (t.ex. höst 2025)
-1. Skapa nya tidtabellsfiler:
-   - `data/ressel-city-fall-2025-weekday.json`
-   - `data/ressel-city-fall-2025-saturday.json`
-   - `data/ressel-city-fall-2025-sunday.json`
+### Lägg till en ny säsong
+Med den nya strukturen behöver du **inte skapa nya filer** för varje säsong, bara uppdatera konfigurationen:
 
-2. Uppdatera konfigurationsfilen `data/ressel-city-config.json` med ny säsongsmappning:
-   ```json
-   {
-     "name": "Fall 2025",
-     "period": {
-       "start": "2025-06-20",
-       "end": "2025-11-03"
-     },
-     "files": {
-       "weekday": "ressel-city-fall-2025-weekday.json",
-       "saturday": "ressel-city-fall-2025-saturday.json",
-       "sunday": "ressel-city-fall-2025-sunday.json"
-     },
-     "holiday_rules": {
-       "weekend_schedule": ["2025-06-21", "2025-12-24"]
-     }
-   }
-   ```
+1. Kontrollera om befintliga generiska filer kan återanvändas
+2. Om tidtabellen är identisk med en tidigare säsong, **återanvänd samma fil**
+3. Uppdatera endast `ressel-city-config.json` eller `ressel-sjo-config.json` med ny säsongsmappning
 
-3. Se till att varje tidtabellsfil har korrekt metadata och avgångstider.
+**Exempel - lägga till sommar 2026:**
 
-### Formatinstruktioner
-Föra tt uppdatera eller skapa nya tidtabeller:
+```json
+{
+  "name": "Summer 2026",
+  "period": {
+    "start": "2026-06-20",
+    "end": "2026-08-16"
+  },
+  "files": {
+    "weekday": "ressel-city-weekday-summer.json",
+    "saturday": "ressel-city-weekend-summer.json",
+    "sunday": "ressel-city-weekend-summer.json"
+  }
+}
+```
 
-1. Identifiera rätt tidtabellsperiod och dagtyp (vardagar/lördag/söndag)
-2. Skapa tidtabellsfiler med rätt namnkonvention: `ressel-[linje]-[säsong]-[dagtyp].json`
-3. Uppdatera konfigurationsfilen med korrekt säsongsmappning
-4. Se till att all metadata är korrekt uppdaterad i alla filer
-5. Kontrollera att hållplatsnamn och avgångstider är formaterade exakt lika i alla filer
+### När ska nya tidtabellsfiler skapas?
 
-Exempel på formattering av tidtabellsfiler finns i avsnittet om datastruktur.
+Skapa **bara** nya filer om:
+- Avgångstiderna är **olika** från alla befintliga generiska filer
+- Det är en helt ny trafiktyp (t.ex. nattbuss, expresslinje)
+
+**Namnkonvention för nya filer:**
+- `ressel-[linje]-[typ]-[variant].json`
+- Exempel: `ressel-city-weekday-summer.json`
 
 ### Hantering av trafikuppehåll (Maintenance Mode)
 
@@ -262,27 +262,25 @@ Linjen har tillfälligt uppehåll på grund av broarbeten. Välkomna åter 13 de
 ## Projektstruktur
 ```
 sjostadsfärjetrafiken/
-├── index.html              # Huvudsida
+├── index.html              # Main page
 ├── css/
 │   └── styles.css          # Styling
 ├── js/
-│   ├── app.js              # Huvudlogik, laddar konfiguration och tidtabeller
-│   ├── timehandler.js      # Hanterar tidberäkning och formattering
-│   └── renderer.js         # Renderar UI med avgångar
+│   ├── app.js              # Main logic, loads configurations and timetables
+│   ├── timehandler.js      # Handles time calculations and formatting
+│   └── renderer.js         # Renders UI with departures
 ├── data/
-│   ├── ressel-sjo-config.json        # Sjöstadstrafiken konfiguration
-│   ├── ressel-city-config.json       # M/S Emelie konfiguration
-│   ├── ressel-sjo-2024-2025-weekday.json    # Sjöstadstrafiken vardagar
-│   ├── ressel-sjo-2024-2025-weekend.json    # Sjöstadstrafiken helger
-│   ├── ressel-city-winter-2024-2025-weekday.json  # M/S Emelie vinter vardagar
-│   ├── ressel-city-winter-2024-2025-saturday.json # M/S Emelie vinter lördagar
-│   ├── ressel-city-winter-2024-2025-sunday.json   # M/S Emelie vinter söndagar
-│   ├── ressel-city-spring-2025-weekday.json       # M/S Emelie vår vardagar
-│   ├── ressel-city-spring-2025-saturday.json      # M/S Emelie vår lördagar
-│   └── ressel-city-spring-2025-sunday.json        # M/S Emelie vår söndagar
+│   ├── ressel-sjo-config.json              # Sjöstadstrafiken configuration
+│   ├── ressel-city-config.json             # M/S Emelie configuration
+│   ├── ressel-sjo-weekday-standard.json    # Sjöstadstrafiken weekdays (rush hour)
+│   ├── ressel-sjo-weekday-summer.json      # Sjöstadstrafiken summer weekdays
+│   ├── ressel-sjo-weekend.json             # Sjöstadstrafiken weekends (all seasons)
+│   ├── ressel-city-weekday-winter.json     # M/S Emelie weekdays (winter/spring/fall)
+│   ├── ressel-city-weekend-winter.json     # M/S Emelie weekends (winter/spring/fall)
+│   └── [plus seasonal files for spring/summer/fall as needed]
 ├── icons/
-│   └── boat.png            # App-ikon
-└── manifest.json           # PWA-konfiguration
+│   └── boat.png            # App icon
+└── manifest.json           # PWA configuration
 ```
 
 ## Licens
@@ -368,7 +366,7 @@ Available parameters:
 
 ## Timetables and Data Structure
 
-The application uses a new file structure that correctly handles transitions between weekday and weekend schedules:
+The application uses a **simplified file structure** (version 5.0.0) with generic timetable files that are reused across multiple seasons:
 
 ### Configuration Files
 These contain metadata and point to the correct timetable files:
@@ -377,19 +375,22 @@ These contain metadata and point to the correct timetable files:
 - **`data/ressel-city-config.json`**: Main configuration for M/S Emelie (City line)
 
 ### Timetable Files
-Separate files per season and day type:
+Version 5.0.0 uses only **5 generic files** instead of 24:
 
-#### Sjöstadstrafiken
-- **`data/ressel-sjo-2024-2025-weekday.json`**: Weekday timetable
-- **`data/ressel-sjo-2024-2025-weekend.json`**: Weekend timetable (for both Saturday and Sunday)
+#### Sjöstadstrafiken (3 files)
+- **`data/ressel-sjo-weekday-standard.json`**: Weekdays with rush hour (used fall/winter/spring)
+- **`data/ressel-sjo-weekday-summer.json`**: Summer weekdays without rush hour
+- **`data/ressel-sjo-weekend.json`**: Weekends (identical for all seasons)
 
-#### M/S Emelie (City Line)
-- **`data/ressel-city-winter-2024-2025-weekday.json`**: Weekday winter timetable
-- **`data/ressel-city-winter-2024-2025-saturday.json`**: Saturday winter timetable
-- **`data/ressel-city-winter-2024-2025-sunday.json`**: Sunday winter timetable
-- **`data/ressel-city-spring-2025-weekday.json`**: Weekday spring timetable
-- **`data/ressel-city-spring-2025-saturday.json`**: Saturday spring timetable
-- **`data/ressel-city-spring-2025-sunday.json`**: Sunday spring timetable
+#### M/S Emelie City Line (2 files)
+- **`data/ressel-city-weekday-winter.json`**: Weekdays (reused for winter/spring/fall)
+- **`data/ressel-city-weekend-winter.json`**: Weekends (reused for winter/spring/fall)
+
+**Benefits of new structure:**
+- 50% fewer files to maintain
+- Easier updates - change one file, affects multiple seasons
+- Clearer file names describing content instead of season
+- Same functionality for users
 
 ### Metadata Structure
 
@@ -405,18 +406,19 @@ Example of season mapping from `ressel-city-config.json`:
 ```json
 "season_mapping": [
   {
-    "name": "Winter 2024-2025",
+    "name": "Winter 2025-2026",
     "period": {
-      "start": "2024-11-04",
-      "end": "2025-04-21"
+      "start": "2025-12-15",
+      "end": "2026-04-19"
     },
     "files": {
-      "weekday": "ressel-city-winter-2024-2025-weekday.json",
-      "saturday": "ressel-city-winter-2024-2025-saturday.json",
-      "sunday": "ressel-city-winter-2024-2025-sunday.json"
+      "weekday": "ressel-city-weekday-winter.json",
+      "saturday": "ressel-city-weekend-winter.json",
+      "sunday": "ressel-city-weekend-winter.json"
     },
     "holiday_rules": {
-      "weekend_schedule": ["2025-01-06", "2025-04-18"]
+      "no_traffic": ["2025-12-24", "2025-12-25", "2025-12-26", "2025-12-31", "2026-01-01"],
+      "weekend_schedule": ["2026-01-06"]
     }
   }
 ]
@@ -430,43 +432,39 @@ Timetable files contain:
 
 ## Updating Timetables
 
-### Adding a New Season (e.g., Fall 2025)
-1. Create new timetable files:
-   - `data/ressel-city-fall-2025-weekday.json`
-   - `data/ressel-city-fall-2025-saturday.json`
-   - `data/ressel-city-fall-2025-sunday.json`
+### Adding a New Season
+With the new structure you **don't need to create new files** for each season, just update the configuration:
 
-2. Update the configuration file `data/ressel-city-config.json` with new season mapping:
-   ```json
-   {
-     "name": "Fall 2025",
-     "period": {
-       "start": "2025-06-20",
-       "end": "2025-11-03"
-     },
-     "files": {
-       "weekday": "ressel-city-fall-2025-weekday.json",
-       "saturday": "ressel-city-fall-2025-saturday.json",
-       "sunday": "ressel-city-fall-2025-sunday.json"
-     },
-     "holiday_rules": {
-       "weekend_schedule": ["2025-06-21", "2025-12-24"]
-     }
-   }
-   ```
+1. Check if existing generic files can be reused
+2. If the timetable is identical to a previous season, **reuse the same file**
+3. Only update `ressel-city-config.json` or `ressel-sjo-config.json` with new season mapping
 
-3. Ensure each timetable file has the correct metadata and departure times.
+**Example - adding summer 2026:**
 
-### Formatting Instructions
-To update or creating new timetables:
+```json
+{
+  "name": "Summer 2026",
+  "period": {
+    "start": "2026-06-20",
+    "end": "2026-08-16"
+  },
+  "files": {
+    "weekday": "ressel-city-weekday-summer.json",
+    "saturday": "ressel-city-weekend-summer.json",
+    "sunday": "ressel-city-weekend-summer.json"
+  }
+}
+```
 
-1. Identify the correct timetable period and day type (weekday/Saturday/Sunday)
-2. Create timetable files with the correct naming convention: `ressel-[line]-[season]-[daytype].json`
-3. Update the configuration file with proper season mapping
-4. Ensure all metadata is correctly updated in all files
-5. Verify that stop names and departure times are formatted exactly the same across all files
+### When to Create New Timetable Files
 
-Examples of timetable file formatting can be found in the data structure section.
+Create new files **only** if:
+- Departure times are **different** from all existing generic files
+- It's a completely new traffic type (e.g., night bus, express line)
+
+**Naming convention for new files:**
+- `ressel-[line]-[type]-[variant].json`
+- Example: `ressel-city-weekday-summer.json`
 
 ### Handling Service Interruptions (Maintenance Mode)
 
@@ -547,16 +545,14 @@ sjostadsfärjetrafiken/
 │   ├── timehandler.js      # Handles time calculations and formatting
 │   └── renderer.js         # Renders UI with departures
 ├── data/
-│   ├── ressel-sjo-config.json        # Sjöstadstrafiken configuration
-│   ├── ressel-city-config.json       # M/S Emelie configuration
-│   ├── ressel-sjo-2024-2025-weekday.json    # Sjöstadstrafiken weekdays
-│   ├── ressel-sjo-2024-2025-weekend.json    # Sjöstadstrafiken weekends
-│   ├── ressel-city-winter-2024-2025-weekday.json  # M/S Emelie winter weekdays
-│   ├── ressel-city-winter-2024-2025-saturday.json # M/S Emelie winter Saturdays
-│   ├── ressel-city-winter-2024-2025-sunday.json   # M/S Emelie winter Sundays
-│   ├── ressel-city-spring-2025-weekday.json       # M/S Emelie spring weekdays
-│   ├── ressel-city-spring-2025-saturday.json      # M/S Emelie spring Saturdays
-│   └── ressel-city-spring-2025-sunday.json        # M/S Emelie spring Sundays
+│   ├── ressel-sjo-config.json              # Sjöstadstrafiken configuration
+│   ├── ressel-city-config.json             # M/S Emelie configuration
+│   ├── ressel-sjo-weekday-standard.json    # Sjöstadstrafiken weekdays (rush hour)
+│   ├── ressel-sjo-weekday-summer.json      # Sjöstadstrafiken summer weekdays
+│   ├── ressel-sjo-weekend.json             # Sjöstadstrafiken weekends (all seasons)
+│   ├── ressel-city-weekday-winter.json     # M/S Emelie weekdays (winter/spring/fall)
+│   ├── ressel-city-weekend-winter.json     # M/S Emelie weekends (winter/spring/fall)
+│   └── [plus seasonal files for spring/summer/fall as needed]
 ├── icons/
 │   └── boat.png            # App icon
 └── manifest.json           # PWA configuration
