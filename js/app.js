@@ -7,6 +7,8 @@
  * 
  * Versionshistorik:
  * 4.2.0 - Hanterar utgångna tidtabeller genom att visa dem med varning
+ * 5.0.0 - Simplified timetable structure (50% fewer files), Winter 2025/2026 added
+ * 4.2.0 - Expired timetable warnings
  * 4.1.0 - Tillagd support för maintenance mode
  * 4.0.0 - Förbättrad versionshantering, automatisk uppdatering, och reload vid reset
  * 3.3.0 - Ta bort "Senaste uppdatering"-text, ändra standardvärde för talsyntes
@@ -17,7 +19,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 4.2.0
+ * @version 5.0.0
  * @license MIT
  */
 
@@ -27,7 +29,7 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @type {Object}
      */
     const config = {
-        version: '4.2.0',                  // Applikationsversion (uppdatera vid varje ny version)
+        version: '5.0.0',                  // Applikationsversion (uppdatera vid varje ny version)
         updateInterval: 60000,             // Uppdateringsintervall i millisekunder (1 minut)
         dataRefreshInterval: 1800000,      // Uppdatera data från server var 30:e minut
         midnightCheckInterval: 60000,      // Kontrollera midnatt var minut
