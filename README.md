@@ -28,6 +28,7 @@ Sjöstadsfärjetrafiken är en **progressiv webbapp (PWA)** med realtidstidtabel
 - [Demo](#demo)
 - [Funktioner](#funktioner)
 - [Kom igång](#kom-igång)
+- [Installera som app](#installera-som-app-iphoneandroid)
 - [Anpassa applikationen](#anpassa-applikationen)
 - [Hur det fungerar](#hur-det-fungerar)
 - [Uppdatera tidtabeller](#uppdatera-tidtabeller)
@@ -62,7 +63,9 @@ Sjöstadsfärjetrafiken är en **progressiv webbapp (PWA)** med realtidstidtabel
 
 ### Enkel start – ingen installation krävs
 
-Gå direkt till: **https://cgillinger.github.io/ressel-static/**
+Appen är hostad på **GitHub Pages** och kräver ingen installation – öppna bara länken i webbläsaren:
+
+**https://cgillinger.github.io/ressel-static/**
 
 ### Lokal installation
 
@@ -146,9 +149,29 @@ chromium-browser --kiosk --noerrdialogs --disable-infobars index.html
 chrome.exe --kiosk --app=file:///C:/path/to/index.html
 ```
 
-**iOS (Safari):** Öppna sidan → tryck på delningsknappen (⬆) → "Lägg till på hemskärmen"
+## Installera som app (iPhone/Android)
 
-**Android:** Öppna sidan → menyn (⋮) → "Lägg till på hemskärmen"
+Appen är en PWA och kan installeras direkt från webbläsaren – utan App Store eller Google Play. Den fungerar sedan precis som en vanlig app med egen ikon på hemskärmen.
+
+### iPhone (Safari)
+
+> Fungerar bara i **Safari** – inte Chrome eller Firefox på iOS.
+
+1. Öppna **https://cgillinger.github.io/ressel-static/** i Safari
+2. Tryck på **dela-knappen** (fyrkanten med pilen uppåt) längst ner i skärmen
+3. Scrolla ner i listan och tryck **"Lägg till på hemskärmen"**
+4. Ändra namn om du vill, tryck sedan **"Lägg till"** uppe till höger
+5. Appen finns nu på hemskärmen och öppnas i helskärmsläge utan webbläsarens adressfält
+
+### Android (Chrome)
+
+1. Öppna **https://cgillinger.github.io/ressel-static/** i Chrome
+2. Tryck på **menyn** (de tre punkterna ⋮) uppe till höger
+3. Tryck **"Lägg till på startskärmen"** eller **"Installera app"**
+4. Bekräfta genom att trycka **"Installera"** eller **"Lägg till"**
+5. Appen finns nu på hemskärmen och i applådan
+
+> På vissa Android-enheter visas en installationsbanner automatiskt längst ner på skärmen – tryck på den för snabbinstallation.
 
 ## Anpassa applikationen
 
