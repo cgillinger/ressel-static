@@ -11,7 +11,7 @@
  * 1.0.0 - Original service worker
  */
 
-const APP_VERSION = '5.1.0';
+const APP_VERSION = '5.1.1';
 const CACHE_NAME = `resseltrafiken-v${APP_VERSION}`;
 const JSON_CACHE_NAME = `resseltrafiken-json-v${APP_VERSION}`;
 
