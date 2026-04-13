@@ -1,14 +1,12 @@
 {
   "_metadata": {
-    "version": "10.0.0",
-    "last_updated": "2025-12-13",
+    "version": "11.0.0",
+    "last_updated": "2026-04-13",
     "description": "FÖRENKLAD struktur - generiska filer för vinter/vår/höst, separata för sommar",
     "data_sources": [
       "CITY LINE VINTER 2024/2025 (PDF)",
-      "CITY LINE VÅREN 2025 (PDF)",
-      "CITY LINE SOMMAREN 2025 (PDF)",
-      "CITY LINE HÖSTEN 2025 (PDF)",
-      "CITY LINE VINTER 2025/2026 (PDF) - NY"
+      "CITY LINE VINTER 2025/2026 (PDF)",
+      "CITY LINE VÅREN 2026 (PDF)"
     ],
     "update_cycle": "Generic files reused across similar seasons",
     "validation_rules": [
@@ -20,21 +18,21 @@
     "type": "paid",
     "pricing": {
       "single": {
-        "adult": 75,
-        "senior_youth": 60
+        "adult": 80,
+        "senior_youth": 65
       },
       "day": {
-        "adult": 125,
-        "senior_youth": 90
+        "adult": 150,
+        "senior_youth": 95
       },
       "multi_trip": {
         "trips": 10,
-        "adult": 560,
-        "senior_youth": 380
+        "adult": 580,
+        "senior_youth": 390
       },
       "monthly": {
-        "adult": 960,
-        "senior_youth": 640
+        "adult": 995,
+        "senior_youth": 650
       }
     },
     "notes": {
@@ -102,78 +100,6 @@
       }
     },
     {
-      "name": "Spring 2025",
-      "period": {
-        "start": "2025-04-22",
-        "end": "2025-06-19"
-      },
-      "files": {
-        "weekday": "ressel-city-spring-2025-weekday.json",
-        "saturday": "ressel-city-spring-2025-saturday.json",
-        "sunday": "ressel-city-spring-2025-sunday.json"
-      },
-      "holiday_rules": {
-        "weekend_schedule": ["2025-05-01", "2025-05-29", "2025-06-06"]
-      },
-      "note": "Spring har unika helgtidtabeller med fler avgångar"
-    },
-    {
-      "name": "Summer 2025",
-      "period": {
-        "start": "2025-06-20",
-        "end": "2025-08-17"
-      },
-      "files": {
-        "weekday": "ressel-city-summer-2025-weekday.json",
-        "saturday": "ressel-city-summer-2025-saturday.json",
-        "sunday": "ressel-city-summer-2025-sunday.json"
-      },
-      "holiday_rules": {
-        "weekend_schedule": ["2025-06-20", "2025-06-21"]
-      },
-      "note": "Summer har unika tidtabeller med lunch-avgång på vardagar"
-    },
-    {
-      "name": "Fall 2025",
-      "period": {
-        "start": "2025-08-18",
-        "end": "2025-09-21"
-      },
-      "files": {
-        "weekday": "ressel-city-fall-2025-weekday.json",
-        "saturday": "ressel-city-fall-2025-saturday.json",
-        "sunday": "ressel-city-fall-2025-sunday.json"
-      },
-      "note": "Fall har unika helgtidtabeller med många avgångar"
-    },
-    {
-      "name": "Fall Extended 2025",
-      "period": {
-        "start": "2025-09-22",
-        "end": "2025-11-13"
-      },
-      "files": {
-        "weekday": "ressel-city-fall-extended-2025-weekday.json",
-        "saturday": "ressel-city-fall-extended-2025-saturday.json",
-        "sunday": "ressel-city-fall-extended-2025-sunday.json"
-      },
-      "note": "Fall extended har färre helgavgångar än Fall"
-    },
-    {
-      "name": "Maintenance Nov-Dec 2025",
-      "period": {
-        "start": "2025-11-14",
-        "end": "2025-12-12"
-      },
-      "files": {
-        "weekday": "ressel-city-maintenance-2025-weekday.json",
-        "saturday": "ressel-city-maintenance-2025-saturday.json",
-        "sunday": "ressel-city-maintenance-2025-sunday.json"
-      },
-      "maintenance_mode": true,
-      "note": "Tillfälligt uppehåll pga broarbeten"
-    },
-    {
       "name": "Winter 2025-2026",
       "period": {
         "start": "2025-12-13",
@@ -203,6 +129,22 @@
         ]
       },
       "note": "Återanvänder samma filer som Winter 2024-2025. Lunch-avgång finns i filen men gäller endast under lov-perioder."
+    },
+    {
+      "name": "Spring 2026",
+      "period": {
+        "start": "2026-04-20",
+        "end": "2026-06-18"
+      },
+      "files": {
+        "weekday": "ressel-city-weekday-winter.json",
+        "saturday": "ressel-city-spring-saturday.json",
+        "sunday": "ressel-city-spring-sunday.json"
+      },
+      "holiday_rules": {
+        "weekend_schedule": ["2026-05-01", "2026-05-14", "2026-06-06"]
+      },
+      "note": "Återanvänder generisk weekday-fil. Lunch visas alltid (inget extra_departures_periods). 1 maj, Kristi himmelsfärd 14 maj, Nationaldagen 6 juni → söndagstrafik."
     }
   ]
 }
