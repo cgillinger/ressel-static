@@ -1412,35 +1412,51 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @param {HTMLElement} wrapper - Behållarelementet
      */
     function addValidityInfo(wrapper) {
-        // Använd konfigurationsdata för giltighetsinfo
-        if (timetableData.config && timetableData.config.city) {
-            const cityConfig = timetableData.config.city;
-            
-            // Hitta aktuell säsong
-            const now = new Date();
-            let currentSeason = null;
-            
-            for (const season of cityConfig.season_mapping) {
+        const now = new Date();
+        const twoYearsFromNow = new Date(now.getFullYear() + 2, now.getMonth(), now.getDate());
+
+        function findCurrentSeason(lineConfig) {
+            if (!lineConfig || !lineConfig.season_mapping) return null;
+            for (const season of lineConfig.season_mapping) {
                 const seasonStart = new Date(season.period.start);
                 const seasonEnd = new Date(season.period.end);
-                
                 if (now >= seasonStart && now <= seasonEnd) {
-                    currentSeason = season;
-                    break;
+                    // Skip open-ended/far-future periods (e.g. 2099) — not meaningful to display
+                    if (seasonEnd > twoYearsFromNow) return null;
+                    return season;
                 }
             }
-            
-            if (currentSeason) {
-                const validFrom = new Date(currentSeason.period.start);
-                const validTo = new Date(currentSeason.period.end);
-                
-                const infoElement = document.createElement("div");
-                infoElement.className = "validity-info";
-                infoElement.textContent = `Aktuell tidtabell gäller: ${validFrom.toLocaleDateString('sv-SE')} - ${validTo.toLocaleDateString('sv-SE')}`;
-                
-                wrapper.appendChild(infoElement);
-            }
+            return null;
         }
+
+        const entries = [];
+
+        if (config.showEmelietrafiken && timetableData.config && timetableData.config.city) {
+            const season = findCurrentSeason(timetableData.config.city);
+            if (season) entries.push({ label: 'M/S Emelie', season });
+        }
+
+        if (config.showSjostadstrafiken && timetableData.config && timetableData.config.sjo) {
+            const season = findCurrentSeason(timetableData.config.sjo);
+            if (season) entries.push({ label: 'Sjöstadstrafiken', season });
+        }
+
+        if (entries.length === 0) return;
+
+        const infoElement = document.createElement('div');
+        infoElement.className = 'validity-info';
+
+        entries.forEach(({ label, season }) => {
+            const row = document.createElement('div');
+            const from = new Date(season.period.start).toLocaleDateString('sv-SE');
+            const to = new Date(season.period.end).toLocaleDateString('sv-SE');
+            row.textContent = entries.length > 1
+                ? `${label}: ${from} – ${to}`
+                : `Aktuell tidtabell gäller: ${from} – ${to}`;
+            infoElement.appendChild(row);
+        });
+
+        wrapper.appendChild(infoElement);
     }
 
     /**
