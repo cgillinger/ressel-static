@@ -11,7 +11,7 @@
  * 1.0.0 - Original service worker
  */
 
-const APP_VERSION = '5.0.2';
+const APP_VERSION = '5.1.0';
 const CACHE_NAME = `resseltrafiken-v${APP_VERSION}`;
 const JSON_CACHE_NAME = `resseltrafiken-json-v${APP_VERSION}`;
 
@@ -32,14 +32,13 @@ const STATIC_FILES_TO_CACHE = [
 const JSON_FILES = [
   './data/ressel-sjo-config.json',
   './data/ressel-city-config.json',
-  './data/ressel-sjo-2024-2025-weekday.json',
-  './data/ressel-sjo-2024-2025-weekend.json',
-  './data/ressel-city-winter-2024-2025-weekday.json',
-  './data/ressel-city-winter-2024-2025-saturday.json',
-  './data/ressel-city-winter-2024-2025-sunday.json',
-  './data/ressel-city-spring-2025-weekday.json',
-  './data/ressel-city-spring-2025-saturday.json',
-  './data/ressel-city-spring-2025-sunday.json'
+  './data/ressel-sjo-weekday-standard.json',
+  './data/ressel-sjo-weekday-summer.json',
+  './data/ressel-sjo-weekend.json',
+  './data/ressel-city-weekday-winter.json',
+  './data/ressel-city-weekend-winter.json',
+  './data/ressel-city-spring-saturday.json',
+  './data/ressel-city-spring-sunday.json'
 ];
 
 /**

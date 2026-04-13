@@ -6,6 +6,7 @@
  * och hanterar applikationens övergripande livscykel.
  * 
  * Versionshistorik:
+ * 5.1.0 - Spring 2026 M/S Emelie, generic spring weekend files, updated pricing, cleanup of obsolete files and config
  * 5.0.2 - CSP-fixar: unsafe-inline, frame-ancestors, enctype
  * 5.0.1 - SÄKERHETSHÄRDNING: innerHTML→textContent, URL-validering, CSP-kompatibel
  * 5.0.0 - Simplified timetable structure (50% fewer files), Winter 2025/2026 added
@@ -20,7 +21,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.0.2
+ * @version 5.1.0
  * @license MIT
  */
 
@@ -56,7 +57,7 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @type {Object}
      */
     const config = {
-        version: '5.0.2',                  // Applikationsversion (uppdatera vid varje ny version)
+        version: '5.1.0',                  // Applikationsversion (uppdatera vid varje ny version)
         updateInterval: 60000,             // Uppdateringsintervall i millisekunder (1 minut)
         dataRefreshInterval: 1800000,      // Uppdatera data från server var 30:e minut
         midnightCheckInterval: 60000,      // Kontrollera midnatt var minut
