@@ -5,10 +5,13 @@ on:
     branches: [ main ]  # Eller den branch du använder
   workflow_dispatch:    # Tillåter manuell körning
 
+permissions:
+  contents: write   # krävs för att deploy-action ska kunna pusha till gh-pages
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout 🛎️
       uses: actions/checkout@v3
