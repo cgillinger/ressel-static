@@ -1,0 +1,167 @@
+{
+  "_metadata": {
+    "version": "12.0.0",
+    "last_updated": "2026-06-14",
+    "description": "FÖRENKLAD struktur - generiska filer för vinter/vår/höst, separata för sommar",
+    "data_sources": [
+      "CITY LINE VINTER 2024/2025 (PDF)",
+      "CITY LINE VINTER 2025/2026 (PDF)",
+      "CITY LINE VÅREN 2026 (PDF)",
+      "CITY LINE SOMMAR 2026 (Tidtabell-Emelie-A4-SOMMAR-2026.pdf)"
+    ],
+    "update_cycle": "Generic files reused across similar seasons",
+    "validation_rules": [
+      "All times must be in HH:MM format",
+      "All dates must be in YYYY-MM-DD format"
+    ]
+  },
+  "metadata": {
+    "type": "paid",
+    "pricing": {
+      "single": {
+        "adult": 80,
+        "senior_youth": 65
+      },
+      "day": {
+        "adult": 150,
+        "senior_youth": 95
+      },
+      "multi_trip": {
+        "trips": 10,
+        "adult": 580,
+        "senior_youth": 390
+      },
+      "monthly": {
+        "adult": 995,
+        "senior_youth": 650
+      }
+    },
+    "notes": {
+      "payment": "Endast betalning med kort - only payment by credit card: Visa & Master Card",
+      "children": "Barn under 13 år reser gratis i målsmans sällskap",
+      "bicycles": "Cyklar medföres avgiftsfritt på egen risk",
+      "youth_age": "13-18 år",
+      "lunch_break": "Lunch-paus: Inga avgångar 13:28, 13:50, 13:56 på vardagar (utom sommaren)",
+      "disembark_only": "Vissa avgångar är endast för avstigning vid Barnängsbryggan, Lumabryggan och Henriksdalsbryggan",
+      "service_stop": "Tisdagar: 09:28, 09:50, 09:56 ingen trafik på grund av service"
+    }
+  },
+  "service_configuration": {
+    "stop_sequence": {
+      "to_city": [
+        "Barnängsbryggan",
+        "Lumabryggan",
+        "Henriksdalsbryggan",
+        "Masthamnen",
+        "Djurgården",
+        "Nybroplan"
+      ],
+      "from_city": [
+        "Nybroplan",
+        "Djurgården",
+        "Masthamnen",
+        "Barnängsbryggan",
+        "Lumabryggan",
+        "Henriksdalsbryggan"
+      ]
+    },
+    "disembark_only_rules": {
+      "description": "Allmänna regler för 'Endast avstigning'. Detaljerad information finns i respektive tidtabellfil.",
+      "weekday": {
+        "morning_after": "12:14",
+        "afternoon_after": "18:44"
+      },
+      "weekend": {
+        "after_lunch": "13:14",
+        "evening": "17:44"
+      },
+      "affected_stops": [
+        "Barnängsbryggan",
+        "Lumabryggan",
+        "Henriksdalsbryggan"
+      ],
+      "notes": "Endast riktning 'from_city' påverkas av dessa regler"
+    }
+  },
+  "season_mapping": [
+    {
+      "name": "Winter 2024-2025",
+      "period": {
+        "start": "2024-11-04",
+        "end": "2025-04-21"
+      },
+      "files": {
+        "weekday": "ressel-city-weekday-winter.json",
+        "saturday": "ressel-city-weekend-winter.json",
+        "sunday": "ressel-city-weekend-winter.json"
+      },
+      "holiday_rules": {
+        "no_traffic": ["2024-12-24", "2024-12-25", "2024-12-26", "2024-12-31", "2025-01-01"],
+        "weekend_schedule": ["2025-01-06", "2025-04-18", "2025-04-19", "2025-04-20", "2025-04-21"]
+      }
+    },
+    {
+      "name": "Winter 2025-2026",
+      "period": {
+        "start": "2025-12-13",
+        "end": "2026-04-19"
+      },
+      "files": {
+        "weekday": "ressel-city-weekday-winter.json",
+        "saturday": "ressel-city-weekend-winter.json",
+        "sunday": "ressel-city-weekend-winter.json"
+      },
+      "holiday_rules": {
+        "no_traffic": ["2025-12-24", "2025-12-25", "2025-12-26", "2025-12-31", "2026-01-01"],
+        "weekend_schedule": ["2026-01-06", "2026-04-03", "2026-04-04", "2026-04-05", "2026-04-06"],
+        "extra_departures_periods": [
+          {
+            "name": "Jullov",
+            "weeks": ["V52", "V1"],
+            "dates": "22 dec 2025 - 2 jan 2026",
+            "note": "Extra lunch-avgång kl 13:44 (till city) och 14:20 (från city)"
+          },
+          {
+            "name": "Sportlov",
+            "weeks": ["V8", "V9"],
+            "dates": "16 feb - 1 mars 2026",
+            "note": "Extra lunch-avgång kl 13:44 (till city) och 14:20 (från city)"
+          }
+        ]
+      },
+      "note": "Återanvänder samma filer som Winter 2024-2025. Lunch-avgång finns i filen men gäller endast under lov-perioder."
+    },
+    {
+      "name": "Spring 2026",
+      "period": {
+        "start": "2026-04-20",
+        "end": "2026-06-18"
+      },
+      "files": {
+        "weekday": "ressel-city-weekday-winter.json",
+        "saturday": "ressel-city-spring-saturday.json",
+        "sunday": "ressel-city-spring-sunday.json"
+      },
+      "holiday_rules": {
+        "weekend_schedule": ["2026-05-01", "2026-05-14", "2026-06-06"]
+      },
+      "note": "Återanvänder generisk weekday-fil. Lunch visas alltid (inget extra_departures_periods). 1 maj, Kristi himmelsfärd 14 maj, Nationaldagen 6 juni → söndagstrafik."
+    },
+    {
+      "name": "Summer 2026",
+      "period": {
+        "start": "2026-06-19",
+        "end": "2026-08-16"
+      },
+      "files": {
+        "weekday": "ressel-city-summer-weekday.json",
+        "saturday": "ressel-city-summer-saturday.json",
+        "sunday": "ressel-city-summer-sunday.json"
+      },
+      "holiday_rules": {
+        "weekend_schedule": ["2026-06-19", "2026-06-20"]
+      },
+      "note": "Sommartidtabell. Midsommarafton 19 juni (fredag) och midsommardagen 20 juni (lördag) trafikeras enligt söndagstidtabell (weekend_schedule → files.sunday)."
+    }
+  ]
+}

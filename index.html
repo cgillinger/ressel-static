@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    
+    <!-- Content Security Policy - SÄKERHETSHÄRDNING -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self';
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data:;
+        connect-src 'self';
+        manifest-src 'self';
+        worker-src 'self';
+        object-src 'none';
+        base-uri 'self';
+    ">
+    
+    <!-- Primary Meta Tags -->
+    <title>Sjöstadsfärjetrafiken - Tidtabell för Sjöstadstrafiken och M/S Emelie</title>
+    <meta name="title" content="Sjöstadsfärjetrafiken - Tidtabell för Sjöstadstrafiken och M/S Emelie">
+    <meta name="description" content="Aktuella tidtabeller för båttrafiken i Hammarby Sjöstad med Sjöstadstrafiken och M/S Emelie">
+    <meta name="author" content="Christian Gillinger">
+    <meta name="version" content="5.2.0">
+    <meta name="app-version" content="5.2.0">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://cgillinger.github.io/ressel-static/">
+    <meta property="og:title" content="Sjöstadsfärjetrafiken - Tidtabell för Sjöstadstrafiken och M/S Emelie">
+    <meta property="og:description" content="Aktuella tidtabeller för båttrafiken i Hammarby Sjöstad">
+    <meta property="og:image" content="./icons/boat.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary">
+    <meta property="twitter:url" content="https://cgillinger.github.io/ressel-static/">
+    <meta property="twitter:title" content="Sjöstadsfärjetrafiken">
+    <meta property="twitter:description" content="Aktuella tidtabeller för båttrafiken i Hammarby Sjöstad">
+    <meta property="twitter:image" content="./icons/boat.png">
+    
+    <!-- Theme Colors -->
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    
+    <!-- Favicon and App Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="./icons/boat.png">
+    <link rel="apple-touch-icon" href="./icons/boat.png">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="./css/styles.css">
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="./manifest.json">
+    
+    <!-- iOS Web App Configuration -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Sjöstadsfärjetrafiken">
+    
+    <!-- Accessibility Metadata -->
+    <meta name="accessibility" content="Stöd för skärmläsare och talsyntes">
+</head>
+<body>
+    <!-- Main Application Container -->
+    <div id="app" role="main" aria-live="polite">
+        <!-- Content will be dynamically inserted here -->
+        <noscript>
+            <div class="notification error">
+                JavaScript måste vara aktiverat för att visa tidtabellerna.
+            </div>
+        </noscript>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="loading" aria-hidden="true">
+        Laddar tidtabeller...
+    </div>
+
+    <!-- Update notification -->
+    <div id="update-notification" class="update-notification" role="alert" style="display: none;">
+        <div class="update-content">
+            <span>Ny version tillgänglig!</span>
+            <button id="update-now-btn">Uppdatera nu</button>
+        </div>
+    </div>
+
+    <!-- Error Boundary -->
+    <div id="error-container" role="alert" aria-atomic="true"></div>
+
+    <!-- Application Scripts - SÄKERHETSHÄRDNING: Flyttat från inline till separata filer -->
+    <script src="./js/init.js"></script>
+    <script src="./js/timehandler.js"></script>
+    <script src="./js/renderer.js"></script>
+    <script src="./js/app.js"></script>
+
+    <!-- Version Information -->
+    <footer role="contentinfo">
+        <small>
+            Sjöstadsfärjetrafiken v5.1.1 | Utvecklad av Christian Gillinger | Detta är en inofficiell tjänst och har inget med Ressel Rederi att göra
+        </small>
+    </footer>
+</body>
+</html>
