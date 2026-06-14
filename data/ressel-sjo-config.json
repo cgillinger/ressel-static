@@ -1,7 +1,7 @@
 {
   "_metadata": {
-    "version": "7.0.0",
-    "last_updated": "2025-12-13",
+    "version": "8.0.0",
+    "last_updated": "2026-06-14",
     "description": "FÖRENKLAD struktur - 3 generiska filer istället för 6 säsongsspecifika",
     "data_sources": [
       "Avgångstider Barnängsbryggan (PDF)",
@@ -81,6 +81,30 @@
       "name": "Höst/Vinter/Vår 2025-2026 (med rusningstid)",
       "period": {
         "start": "2025-08-18",
+        "end": "2026-06-19",
+        "note": "Standard med rusningstrafik fram till sommartidtabellen 2026"
+      },
+      "files": {
+        "weekday": "ressel-sjo-weekday-standard.json",
+        "weekend": "ressel-sjo-weekend.json"
+      }
+    },
+    {
+      "name": "Sommar 2026 (utan rusningstid)",
+      "period": {
+        "start": "2026-06-20",
+        "end": "2026-08-16",
+        "note": "Sommartidtabell 20 juni - 16 aug 2026, ingen rusningstrafik. Källa: skärmdumpar Sjöstadstrafiken sommar 2026"
+      },
+      "files": {
+        "weekday": "ressel-sjo-weekday-summer.json",
+        "weekend": "ressel-sjo-weekend.json"
+      }
+    },
+    {
+      "name": "Höst/Vinter/Vår 2026-2027 (med rusningstid)",
+      "period": {
+        "start": "2026-08-17",
         "end": "2099-12-31",
         "note": "Återgår till standard med rusningstrafik"
       },

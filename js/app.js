@@ -6,6 +6,7 @@
  * och hanterar applikationens övergripande livscykel.
  * 
  * Versionshistorik:
+ * 5.2.0 - Sommartidtabell 2026: M/S Emelie (sommar weekday/saturday/sunday) + Sjöstadstrafiken sommarsäsong, midsommar 19-20 juni som söndagstrafik
  * 5.1.1 - Fix validity date display: show per-line period, filter open-ended seasons
  * 5.1.0 - Spring 2026 M/S Emelie, generic spring weekend files, updated pricing, cleanup of obsolete files and config
  * 5.0.2 - CSP-fixar: unsafe-inline, frame-ancestors, enctype
@@ -22,7 +23,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.1.1
+ * @version 5.2.0
  * @license MIT
  */
 
@@ -58,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @type {Object}
      */
     const config = {
-        version: '5.1.1',                  // Applikationsversion (uppdatera vid varje ny version)
+        version: '5.2.0',                  // Applikationsversion (uppdatera vid varje ny version)
         updateInterval: 60000,             // Uppdateringsintervall i millisekunder (1 minut)
         dataRefreshInterval: 1800000,      // Uppdatera data från server var 30:e minut
         midnightCheckInterval: 60000,      // Kontrollera midnatt var minut

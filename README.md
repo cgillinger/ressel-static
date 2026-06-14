@@ -6,7 +6,7 @@
 
 **Realtidstidtabell för Sjöstadstrafiken och M/S Emelie i Hammarby Sjöstad, Stockholm**
 
-[![Version](https://img.shields.io/badge/version-5.1.0-blue?style=flat-square)](https://github.com/cgillinger/ressel-static/releases)
+[![Version](https://img.shields.io/badge/version-5.2.0-blue?style=flat-square)](https://github.com/cgillinger/ressel-static/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![PWA](https://img.shields.io/badge/PWA-ready-5A0FC8?style=flat-square&logo=pwa&logoColor=white)](https://cgillinger.github.io/ressel-static/)
 [![GitHub Pages](https://img.shields.io/badge/hosted-GitHub%20Pages-222?style=flat-square&logo=github)](https://cgillinger.github.io/ressel-static/)
@@ -235,7 +235,10 @@ data/
 ├── ressel-city-weekday-winter.json     ← Vardagar (vinter/vår/höst)
 ├── ressel-city-weekend-winter.json     ← Helger vinter
 ├── ressel-city-spring-saturday.json    ← Lördagar vår
-└── ressel-city-spring-sunday.json      ← Söndagar vår
+├── ressel-city-spring-sunday.json      ← Söndagar vår
+├── ressel-city-summer-weekday.json     ← Vardagar sommar
+├── ressel-city-summer-saturday.json    ← Lördagar sommar
+└── ressel-city-summer-sunday.json      ← Söndagar sommar
 ```
 
 ### Konfigurationsfiler

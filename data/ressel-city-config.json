@@ -1,12 +1,13 @@
 {
   "_metadata": {
-    "version": "11.0.0",
-    "last_updated": "2026-04-13",
+    "version": "12.0.0",
+    "last_updated": "2026-06-14",
     "description": "FÖRENKLAD struktur - generiska filer för vinter/vår/höst, separata för sommar",
     "data_sources": [
       "CITY LINE VINTER 2024/2025 (PDF)",
       "CITY LINE VINTER 2025/2026 (PDF)",
-      "CITY LINE VÅREN 2026 (PDF)"
+      "CITY LINE VÅREN 2026 (PDF)",
+      "CITY LINE SOMMAR 2026 (Tidtabell-Emelie-A4-SOMMAR-2026.pdf)"
     ],
     "update_cycle": "Generic files reused across similar seasons",
     "validation_rules": [
@@ -145,6 +146,22 @@
         "weekend_schedule": ["2026-05-01", "2026-05-14", "2026-06-06"]
       },
       "note": "Återanvänder generisk weekday-fil. Lunch visas alltid (inget extra_departures_periods). 1 maj, Kristi himmelsfärd 14 maj, Nationaldagen 6 juni → söndagstrafik."
+    },
+    {
+      "name": "Summer 2026",
+      "period": {
+        "start": "2026-06-19",
+        "end": "2026-08-16"
+      },
+      "files": {
+        "weekday": "ressel-city-summer-weekday.json",
+        "saturday": "ressel-city-summer-saturday.json",
+        "sunday": "ressel-city-summer-sunday.json"
+      },
+      "holiday_rules": {
+        "weekend_schedule": ["2026-06-19", "2026-06-20"]
+      },
+      "note": "Sommartidtabell. Midsommarafton 19 juni (fredag) och midsommardagen 20 juni (lördag) trafikeras enligt söndagstidtabell (weekend_schedule → files.sunday)."
     }
   ]
 }

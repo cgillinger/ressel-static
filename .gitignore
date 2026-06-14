@@ -35,3 +35,6 @@ data/backup_*
 # Temporary files
 *.tmp
 *.bak
+
+# Source timetables (PDF/bilder) - referensmaterial, ska aldrig pushas
+pdf/
