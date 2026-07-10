@@ -829,6 +829,23 @@ footer {
 }
 
 /* Print Styles */
+/* Swipe-indikator: visas när avgångstiderna flödar över horisontellt (mobil) */
+.MMM-Resseltrafiken .times.overflow {
+    position: relative;
+    scrollbar-width: none;
+}
+
+.MMM-Resseltrafiken .swipe-indicator {
+    position: sticky;
+    right: 0;
+    align-self: center;
+    flex-shrink: 0;
+    padding-left: 6px;
+    color: var(--color-text-dimmed);
+    background: linear-gradient(to right, transparent, var(--color-background) 40%);
+    pointer-events: none;
+}
+
 @media print {
     .MMM-Resseltrafiken {
         background: white;
@@ -840,7 +857,8 @@ footer {
     .settings-overlay,
     .speech-button,
     .update-notification,
-    .update-banner {
+    .update-banner,
+    .swipe-indicator {
         display: none;
     }
 }
