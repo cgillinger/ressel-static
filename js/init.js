@@ -5,16 +5,17 @@
  * Flyttat till separat fil för CSP-kompatibilitet (Content Security Policy).
  * 
  * Versionshistorik:
+ * 5.2.1 - Buggfixar: uppdateringsknappen inväntar cache-rensning och rensar inte offline
  * 5.0.2 - CSP-fixar: unsafe-inline, frame-ancestors borttagen, enctype tillagd
  * 5.0.1 - Skapad: Flyttat inline-script från index.html för CSP
- * 
+ *
  * @author Christian Gillinger
- * @version 5.0.2
+ * @version 5.2.1
  * @license MIT
  */
 
 // Applikationsversion (ska matcha manifest.json och app.js)
-window.APP_VERSION = '5.0.2';
+window.APP_VERSION = '5.2.1';
 
 /**
  * Global felhanterare (SÄKERHETSHÄRDAD)
@@ -56,14 +57,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const updateButton = document.getElementById('update-now-btn');
     if (updateButton) {
         updateButton.addEventListener('click', function() {
-            // Rensa cacher och ladda om sidan
-            if ('caches' in window) {
-                caches.keys().then(function(cacheNames) {
-                    cacheNames.forEach(function(cacheName) {
-                        caches.delete(cacheName);
+            // Rensa cacher och ladda om sidan. Rensa INTE offline: då raderas
+            // även service workerns offline-fallback och omladdningen slutar
+            // i webbläsarens felsida i stället för appen.
+            if ('caches' in window && navigator.onLine) {
+                caches.keys()
+                    .then(function(cacheNames) {
+                        return Promise.all(cacheNames.map(function(cacheName) {
+                            return caches.delete(cacheName);
+                        }));
+                    })
+                    .catch(function(err) {
+                        console.error('Kunde inte rensa cache:', err);
+                    })
+                    .then(function() {
+                        location.reload(true);
                     });
-                    location.reload(true);
-                });
             } else {
                 location.reload(true);
             }

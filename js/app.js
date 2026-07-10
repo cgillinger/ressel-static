@@ -6,6 +6,7 @@
  * och hanterar applikationens övergripande livscykel.
  * 
  * Versionshistorik:
+ * 5.2.1 - Buggfixar: säsongsgränser jämförs som lokala kalenderdagar (UTC-buggen), återställd utgången-varning, delfel vid laddning slår inte ut visningen, midnattskoll vid visibilitychange
  * 5.2.0 - Sommartidtabell 2026: M/S Emelie (sommar weekday/saturday/sunday) + Sjöstadstrafiken sommarsäsong, midsommar 19-20 juni som söndagstrafik
  * 5.1.1 - Fix validity date display: show per-line period, filter open-ended seasons
  * 5.1.0 - Spring 2026 M/S Emelie, generic spring weekend files, updated pricing, cleanup of obsolete files and config
@@ -23,7 +24,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.2.0
+ * @version 5.2.1
  * @license MIT
  */
 
@@ -59,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @type {Object}
      */
     const config = {
-        version: '5.2.0',                  // Applikationsversion (uppdatera vid varje ny version)
+        version: '5.2.1',                  // Applikationsversion (uppdatera vid varje ny version)
         updateInterval: 60000,             // Uppdateringsintervall i millisekunder (1 minut)
         dataRefreshInterval: 1800000,      // Uppdatera data från server var 30:e minut
         midnightCheckInterval: 60000,      // Kontrollera midnatt var minut
@@ -656,6 +657,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
+     * Formaterar ett Date-objekt som lokal kalenderdag (YYYY-MM-DD).
+     * Säsongsjämförelser MÅSTE göras som datumsträngar: new Date("YYYY-MM-DD")
+     * tolkas som UTC-midnatt och missar därför större delen av sista
+     * giltighetsdagen vid jämförelse mot lokal tid.
+     * @param {Date} date - Datum att formatera
+     * @returns {string} Datum i formatet YYYY-MM-DD (lokal tid)
+     */
+    function getLocalDateString(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    /**
      * Bestämmer vilka tidtabellsfiler som ska användas baserat på aktuellt datum och konfiguration
      * @param {Object} configData - Konfigurationsdata
      * @param {Date} date - Datum att bestämma schema för
@@ -678,20 +694,20 @@ document.addEventListener('DOMContentLoaded', async function() {
             const isSunday = dayOfWeek === 0;
             const dayType = isSaturday ? "saturday" : (isSunday ? "sunday" : "weekday");
 
+            // Lokal kalenderdag som sträng — ISO-datum kan jämföras lexikalt
+            const dateStr = getLocalDateString(date);
+
             // Hitta lämplig Sjöstadstrafiken-tidtabellfil
             let sjoSeason = null;
             let sjoLatestSeason = null;
-            
+
             for (const season of configData.sjo.season_mapping) {
-                const seasonStart = new Date(season.period.start);
-                const seasonEnd = new Date(season.period.end);
-                
                 // Spara senaste säsongen vi hittar
-                if (!sjoLatestSeason || seasonEnd > new Date(sjoLatestSeason.period.end)) {
+                if (!sjoLatestSeason || season.period.end > sjoLatestSeason.period.end) {
                     sjoLatestSeason = season;
                 }
-                
-                if (date >= seasonStart && date <= seasonEnd) {
+
+                if (dateStr >= season.period.start && dateStr <= season.period.end) {
                     sjoSeason = season;
                     break;
                 }
@@ -715,18 +731,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             let cityLatestSeason = null;
             
             for (const season of configData.city.season_mapping) {
-                const seasonStart = new Date(season.period.start);
-                const seasonEnd = new Date(season.period.end);
-                
                 // Spara senaste säsongen vi hittar
-                if (!cityLatestSeason || seasonEnd > new Date(cityLatestSeason.period.end)) {
+                if (!cityLatestSeason || season.period.end > cityLatestSeason.period.end) {
                     cityLatestSeason = season;
                 }
-                
-                if (date >= seasonStart && date <= seasonEnd) {
+
+                if (dateStr >= season.period.start && dateStr <= season.period.end) {
                     // Kontrollera om aktuellt datum är en helgdag som ska använda helgschema
                     if (season.holiday_rules && season.holiday_rules.weekend_schedule) {
-                        const dateStr = date.toISOString().split('T')[0];
                         if (season.holiday_rules.weekend_schedule.includes(dateStr)) {
                             result.city = season.files.sunday;
                             result.cityExpired = false;
@@ -1415,16 +1427,17 @@ document.addEventListener('DOMContentLoaded', async function() {
      */
     function addValidityInfo(wrapper) {
         const now = new Date();
-        const twoYearsFromNow = new Date(now.getFullYear() + 2, now.getMonth(), now.getDate());
+        const nowStr = getLocalDateString(now);
+        const twoYearsFromNowStr = getLocalDateString(
+            new Date(now.getFullYear() + 2, now.getMonth(), now.getDate())
+        );
 
         function findCurrentSeason(lineConfig) {
             if (!lineConfig || !lineConfig.season_mapping) return null;
             for (const season of lineConfig.season_mapping) {
-                const seasonStart = new Date(season.period.start);
-                const seasonEnd = new Date(season.period.end);
-                if (now >= seasonStart && now <= seasonEnd) {
+                if (nowStr >= season.period.start && nowStr <= season.period.end) {
                     // Skip open-ended/far-future periods (e.g. 2099) — not meaningful to display
-                    if (seasonEnd > twoYearsFromNow) return null;
+                    if (season.period.end > twoYearsFromNowStr) return null;
                     return season;
                 }
             }
@@ -1450,8 +1463,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         entries.forEach(({ label, season }) => {
             const row = document.createElement('div');
-            const from = new Date(season.period.start).toLocaleDateString('sv-SE');
-            const to = new Date(season.period.end).toLocaleDateString('sv-SE');
+            // Periodgränserna är redan YYYY-MM-DD (svenskt datumformat) — ingen
+            // Date-parsning som kan förskjuta dagen i andra tidszoner
+            const from = season.period.start;
+            const to = season.period.end;
             row.textContent = entries.length > 1
                 ? `${label}: ${from} – ${to}`
                 : `Aktuell tidtabell gäller: ${from} – ${to}`;
@@ -1737,6 +1752,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     function handleError(error, message) {
         console.error('Applikationsfel:', error);
         const appElement = document.getElementById('app');
+        // Ersätt innehållet i stället för att stapla felbanners ovanpå varandra
+        appElement.innerHTML = '';
         const wrapper = renderer.createWrapper();
         
         const errorDiv = document.createElement('div');
@@ -1787,18 +1804,34 @@ document.addEventListener('DOMContentLoaded', async function() {
                 loadTimetableForDate(timetableData.config, tomorrow)
             ]);
             
-            if (todayData && tomorrowData) {
+            if (todayData) {
                 timetableData.today = todayData;
-                timetableData.tomorrow = tomorrowData;
+                // Morgondagen är inte kritisk — visa dagens avgångar även om den saknas
+                timetableData.tomorrow = tomorrowData || {
+                    sjo: null,
+                    city: null,
+                    disembarkOnly: { toCity: null, fromCity: null }
+                };
                 timetableData.lastUpdate = now;
                 updateDisplay(true);
-                
+
+                if (!tomorrowData) {
+                    console.warn('Kunde inte ladda morgondagens tidtabell — visar endast dagens avgångar');
+                }
                 debugLog('Tidtabellsdata laddad framgångsrikt');
+            } else if (timetableData.today && timetableData.today.sjo) {
+                // Uppdateringen misslyckades men en giltig tidtabell visas redan —
+                // behåll den i stället för att ersätta med ett felmeddelande
+                console.warn('Uppdatering av tidtabellsdata misslyckades — behåller nuvarande visning');
             } else {
                 handleError(null, 'Kunde inte ladda tidtabellsdata');
             }
         } catch (error) {
-            handleError(error, 'Fel vid laddning av tidtabellsdata');
+            if (timetableData.today && timetableData.today.sjo) {
+                console.warn('Uppdatering av tidtabellsdata misslyckades — behåller nuvarande visning', error);
+            } else {
+                handleError(error, 'Fel vid laddning av tidtabellsdata');
+            }
         }
     }
 
@@ -1885,6 +1918,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') {
                     debugLog('Sidan aktiv igen, uppdaterar display...');
+                    checkForMidnight();
                     updateDisplay(true);
                     checkForVersionUpdates();
                 }

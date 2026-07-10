@@ -6,6 +6,7 @@
  * highlight-effekter för avgångar.
  * 
  * Versionshistorik:
+ * 5.2.1 - Återställd "utgången tidtabell"-varning (försvann i säkerhetshärdningen), nu med textContent
  * 5.0.1 - Säkerhetshärdning: Ersatt innerHTML med textContent/createElement
  * 4.1.0 - Tillagd support för maintenance mode (tillfälliga trafikuppehåll)
  * 4.0.0 - Förbättrad versionshantering och uppdateringsnotifieringar
@@ -18,7 +19,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.0.2
+ * @version 5.2.1
  * @license MIT
  */
 
@@ -104,15 +105,37 @@ class Renderer {
      * @param {string} highlightStop - Hållplats att markera
      * @param {Object} disembarkOnlyToday - "Endast avstigning"-tider för idag
      * @param {Object} disembarkOnlyTomorrow - "Endast avstigning"-tider för imorgon
+     * @param {boolean} isExpired - Om tidtabellen har gått ut
+     * @param {string} expiryDate - Datum när tidtabellen gick ut (YYYY-MM-DD format)
      * @returns {HTMLElement} Tidtabellselement
      */
-    createTimetable(timetableData, title, subtitle, highlightStop, disembarkOnlyToday, disembarkOnlyTomorrow) {
+    createTimetable(timetableData, title, subtitle, highlightStop, disembarkOnlyToday, disembarkOnlyTomorrow, isExpired = false, expiryDate = null) {
         const timetable = document.createElement("div");
         timetable.className = "timetable";
-        
+
         // Lägg till titel (utan undertitel) och talsyntes-knapp om aktiverad
         timetable.appendChild(this.createTitleSection(title, timetableData, highlightStop, disembarkOnlyToday, disembarkOnlyTomorrow));
-        
+
+        // Visa varning om tidtabellen är utgången (SÄKERHETSHÄRDAD: textContent)
+        if (isExpired && expiryDate) {
+            const expiryWarning = document.createElement("div");
+            expiryWarning.className = "notification warning";
+            expiryWarning.style.marginTop = "10px";
+            expiryWarning.style.marginBottom = "15px";
+
+            // timeZone: 'UTC' — expiryDate parsas som UTC-midnatt och får inte
+            // förskjutas en dag bakåt i tidszoner väster om UTC
+            const formattedDate = new Date(expiryDate).toLocaleDateString('sv-SE', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                timeZone: 'UTC'
+            });
+
+            expiryWarning.textContent = `⚠️ Denna tidtabell gick ut ${formattedDate}. Tiderna nedan kan vara inaktuella.`;
+            timetable.appendChild(expiryWarning);
+        }
+
         // Kontrollera om detta är maintenance mode
         if (timetableData && timetableData.metadata && timetableData.metadata.maintenance_mode) {
             // Visa maintenance-meddelande istället för tidtabell
