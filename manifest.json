@@ -2,7 +2,7 @@
   "name": "Sjöstadsfärjetrafiken",
   "short_name": "Sjöstadsfärjer",
   "description": "Tidtabeller för Sjöstadstrafiken och M/S Emelie båtlinjer i Stockholm",
-  "version": "5.2.1",
+  "version": "5.2.2",
   "author": "Christian Gillinger",
   "start_url": "./",
   "display": "standalone",
@@ -61,31 +61,20 @@
 
   "screenshots": [
     {
-      "src": "./api/placeholder/1080/2340",
-      "sizes": "1080x2340",
+      "src": "./images/screenshot.png",
+      "sizes": "847x1059",
       "type": "image/png",
       "platform": "narrow",
       "label": "Sjöstadsfärjetrafiken på mobil"
     },
     {
-      "src": "./api/placeholder/2048/1536",
-      "sizes": "2048x1536",
+      "src": "./images/screenshot2.png",
+      "sizes": "1196x879",
       "type": "image/png",
       "platform": "wide",
       "label": "Sjöstadsfärjetrafiken på surfplatta/dator"
     }
   ],
-
-  "share_target": {
-    "action": "./share-target",
-    "method": "GET",
-    "enctype": "application/x-www-form-urlencoded",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
-  },
 
   "display_override": ["standalone", "minimal-ui"],
   

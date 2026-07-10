@@ -10,12 +10,12 @@
  * 5.0.1 - Skapad: Flyttat inline-script från index.html för CSP
  *
  * @author Christian Gillinger
- * @version 5.2.1
+ * @version 5.2.2
  * @license MIT
  */
 
 // Applikationsversion (ska matcha manifest.json och app.js)
-window.APP_VERSION = '5.2.1';
+window.APP_VERSION = '5.2.2';
 
 /**
  * Global felhanterare (SÄKERHETSHÄRDAD)
