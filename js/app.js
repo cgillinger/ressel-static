@@ -6,6 +6,7 @@
  * och hanterar applikationens övergripande livscykel.
  * 
  * Versionshistorik:
+ * 5.2.2 - no_traffic-dagar visas som trafikuppehåll, omrendering bevarar fokus och hoppar över oförändrat innehåll, overflow-mätning efter DOM-montering, maintenance-läge nåbart för Sjöstadstrafiken, DST-säker dagsberäkning
  * 5.2.1 - Buggfixar: säsongsgränser jämförs som lokala kalenderdagar (UTC-buggen), återställd utgången-varning, delfel vid laddning slår inte ut visningen, midnattskoll vid visibilitychange
  * 5.2.0 - Sommartidtabell 2026: M/S Emelie (sommar weekday/saturday/sunday) + Sjöstadstrafiken sommarsäsong, midsommar 19-20 juni som söndagstrafik
  * 5.1.1 - Fix validity date display: show per-line period, filter open-ended seasons
@@ -24,7 +25,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.2.1
+ * @version 5.2.2
  * @license MIT
  */
 
@@ -60,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @type {Object}
      */
     const config = {
-        version: '5.2.1',                  // Applikationsversion (uppdatera vid varje ny version)
+        version: '5.2.2',                  // Applikationsversion (uppdatera vid varje ny version)
         updateInterval: 60000,             // Uppdateringsintervall i millisekunder (1 minut)
         dataRefreshInterval: 1800000,      // Uppdatera data från server var 30:e minut
         midnightCheckInterval: 60000,      // Kontrollera midnatt var minut
@@ -217,6 +218,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Behåll en referens till inställningspanelen
     let settingsPanel = null;
 
+    // Senast renderade HTML — används för att hoppa över onödiga DOM-utbyten
+    let lastRenderedHTML = null;
+
     /**
      * Konverterar JavaScript-dag (0-6, där 0 är söndag) till appdagar (1-7, där 1 är måndag)
      * @param {number} jsDay JavaScript-dag (0-6)
@@ -257,9 +261,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 date.getFullYear() === currentDate.getFullYear()) {
                 dayOffset = 1;
             } else {
-                // För andra fall, beräkna exakt skillnad
+                // För andra fall, beräkna exakt skillnad. Math.round (inte ceil):
+                // vid sommartidsomställning skiljer dygnen ±1 timme från 24h
                 const diffTime = date.getTime() - currentDate.getTime();
-                dayOffset = Math.ceil(diffTime / (1000 * 3600 * 24));
+                dayOffset = Math.round(diffTime / (1000 * 3600 * 24));
             }
         }
         
@@ -684,7 +689,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             sjoExpired: false,
             cityExpired: false,
             sjoExpiryDate: null,
-            cityExpiryDate: null
+            cityExpiryDate: null,
+            cityNoTraffic: false
         };
 
         try {
@@ -737,6 +743,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
 
                 if (dateStr >= season.period.start && dateStr <= season.period.end) {
+                    // Trafikfria dagar (jul, nyår m.fl.): ladda dagens fil som vanligt
+                    // men flagga så att renderingen visar "ingen trafik" i stället
+                    if (season.holiday_rules && season.holiday_rules.no_traffic &&
+                        season.holiday_rules.no_traffic.includes(dateStr)) {
+                        result.cityNoTraffic = true;
+                    }
+
                     // Kontrollera om aktuellt datum är en helgdag som ska använda helgschema
                     if (season.holiday_rules && season.holiday_rules.weekend_schedule) {
                         if (season.holiday_rules.weekend_schedule.includes(dateStr)) {
@@ -821,6 +834,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 expiryDate: {
                     sjo: timetableFiles.sjoExpiryDate,
                     city: timetableFiles.cityExpiryDate
+                },
+                noTraffic: {
+                    city: timetableFiles.cityNoTraffic
                 }
             };
         } catch (error) {
@@ -892,12 +908,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Uppdatera senaste uppdateringstidpunkt
         timetableData.lastRefresh = now;
-        
-        appElement.innerHTML = '';
-        const wrapper = renderer.createWrapper();
-
-        // Visa uppdateringsbanner om applikationen nyligen har uppdaterats
-        showUpdateBanner();
 
         if (!timetableData.today || !timetableData.today.sjo || !timetableData.today.city) {
             handleError(null, 'Ingen tidtabellsdata tillgänglig');
@@ -906,20 +916,43 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         try {
             debugLog('Uppdaterar visning...');
-            
-            // Lägg till tidtabellsgiltighetsinfo
+
+            // Bygg det nya innehållet frikopplat från DOM:en
+            const wrapper = renderer.createWrapper();
             addValidityInfo(wrapper);
-            
-            // Först rendera tidtabeller
             renderTimetables(wrapper);
-            
-            // Lägg sedan till inställningsknapp om inte i inbäddat läge
             if (!isEmbedded()) {
                 addSettingsButton(wrapper);
             }
-            
-            renderer.setupOverflowObservers(wrapper);
+
+            // Hoppa över DOM-utbytet om innehållet är oförändrat — ett utbyte
+            // tappar tangentbordsfokus och får skärmläsare att läsa om allt
+            if (!isAppUpdated && lastRenderedHTML === wrapper.outerHTML) {
+                debugLog('Innehåll oförändrat, hoppar över omrendering');
+                return;
+            }
+            lastRenderedHTML = wrapper.outerHTML;
+
+            // Bevara tangentbordsfokus över utbytet
+            const active = document.activeElement;
+            const focusSelector = active && appElement.contains(active) && active.className ?
+                '.' + String(active.className).trim().split(/\s+/).join('.') : null;
+
+            appElement.innerHTML = '';
             appElement.appendChild(wrapper);
+
+            // Overflow-mätning kräver att elementen är monterade i DOM:en
+            // (scrollWidth/clientWidth är 0 på frikopplade element)
+            renderer.setupOverflowObservers(wrapper);
+
+            if (focusSelector) {
+                const el = appElement.querySelector(focusSelector);
+                if (el && typeof el.focus === 'function') el.focus();
+            }
+
+            // Visa uppdateringsbanner om applikationen nyligen har uppdaterats
+            showUpdateBanner();
+
             debugLog('Visningsuppdatering komplett');
         } catch (error) {
             handleError(error, 'Fel vid uppdatering av display');
@@ -1512,15 +1545,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         const isExpired = timetableData.today.isExpired.sjo;
         const expiryDate = timetableData.today.expiryDate.sjo;
         
-        if (sjoData && sjoData.departures) {
-            const dayTypeText = sjoData.metadata.day_type === 'weekday' ? 'Vardagar' : 'Helgtrafik';
+        // Rendera även utan departures om filen är i maintenance-läge —
+        // annars försvinner hela sektionen i stället för att visa beskedet
+        if (sjoData && (sjoData.departures ||
+                (sjoData.metadata && sjoData.metadata.maintenance_mode))) {
             const processedDepartures = {};
-            
+
             const now = new Date();
             const tomorrow = new Date(now);
             tomorrow.setDate(tomorrow.getDate() + 1);
-            
-            for (const [stop, times] of Object.entries(sjoData.departures)) {
+
+            for (const [stop, times] of Object.entries(sjoData.departures || {})) {
                 // Skapa array med dagens tider med dagsinformation
                 const todayTimes = createEnhancedTimeObjects(times, now, now);
                 
@@ -1539,7 +1574,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             // Skicka tomt som dayTypeText för att inte visa det
             const timetable = renderer.createTimetable(
-                { departures: processedDepartures },
+                {
+                    departures: processedDepartures,
+                    metadata: sjoData.metadata  // Krävs för maintenance-läge
+                },
                 "Sjöstadstrafiken",
                 "", // Tomt istället för dayTypeText
                 config.highlightStop,
@@ -1601,12 +1639,34 @@ document.addEventListener('DOMContentLoaded', async function() {
      */
     function renderEmelieTimetables(wrapper) {
         const cityData = timetableData.today.city;
-        const cityTomorrow = timetableData.tomorrow.city;
         const isExpired = timetableData.today.isExpired.city;
         const expiryDate = timetableData.today.expiryDate.city;
-        
+
         if (!cityData) return;
-        
+
+        // Trafikfri dag (jul, nyår m.fl.): visa besked i stället för avgångstider
+        if (timetableData.today.noTraffic && timetableData.today.noTraffic.city) {
+            const notice = renderer.createTimetable(
+                {
+                    metadata: {
+                        maintenance_mode: true,
+                        maintenance_message: 'Ingen trafik idag — M/S Emelie gör uppehåll under helgdagen.'
+                    }
+                },
+                "M/S Emelie",
+                "",
+                null,
+                null,
+                null
+            );
+            wrapper.appendChild(notice);
+            return;
+        }
+
+        // Är morgondagen trafikfri ska dess tider inte flätas in i listorna
+        const tomorrowNoTraffic = timetableData.tomorrow.noTraffic && timetableData.tomorrow.noTraffic.city;
+        const cityTomorrow = tomorrowNoTraffic ? null : timetableData.tomorrow.city;
+
         const dayTypeText = cityData.metadata.day_type === 'weekday' ? 'Vardagar' : 
                            (cityData.metadata.day_type === 'saturday' ? 'Lördagar' : 'Söndagar');
         
@@ -1773,7 +1833,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Om vi inte har någon tidigare laddad data, eller om det är ett nytt dygn
         if (!timetableData.today || !timetableData.today.sjo || !timetableData.today.city ||
-            new Date(timetableData.today.sjo._loadedForDate).getDate() !== now.getDate()) {
+            getLocalDateString(new Date(timetableData.today.sjo._loadedForDate)) !== getLocalDateString(now)) {
             
             debugLog('Nytt dygn detekterat, laddar om tidtabellsdata');
             loadAllTimetables();
@@ -1810,9 +1870,17 @@ document.addEventListener('DOMContentLoaded', async function() {
                 timetableData.tomorrow = tomorrowData || {
                     sjo: null,
                     city: null,
-                    disembarkOnly: { toCity: null, fromCity: null }
+                    disembarkOnly: { toCity: null, fromCity: null },
+                    noTraffic: { city: false }
                 };
                 timetableData.lastUpdate = now;
+
+                // Stäng ev. öppen inställningspanel — dess bryggval är byggda
+                // från data som just har ersatts
+                if (settingsPanel && settingsPanel.classList.contains('open')) {
+                    closeSettingsPanel();
+                }
+
                 updateDisplay(true);
 
                 if (!tomorrowData) {
@@ -1821,14 +1889,18 @@ document.addEventListener('DOMContentLoaded', async function() {
                 debugLog('Tidtabellsdata laddad framgångsrikt');
             } else if (timetableData.today && timetableData.today.sjo) {
                 // Uppdateringen misslyckades men en giltig tidtabell visas redan —
-                // behåll den i stället för att ersätta med ett felmeddelande
+                // behåll den i stället för att ersätta med ett felmeddelande.
+                // Trolig orsak i gamla flikar: säsongsfiler har bytts ut i en ny
+                // version — versionskontrollen visar då uppdateringsknappen.
                 console.warn('Uppdatering av tidtabellsdata misslyckades — behåller nuvarande visning');
+                checkForVersionUpdates();
             } else {
                 handleError(null, 'Kunde inte ladda tidtabellsdata');
             }
         } catch (error) {
             if (timetableData.today && timetableData.today.sjo) {
                 console.warn('Uppdatering av tidtabellsdata misslyckades — behåller nuvarande visning', error);
+                checkForVersionUpdates();
             } else {
                 handleError(error, 'Fel vid laddning av tidtabellsdata');
             }

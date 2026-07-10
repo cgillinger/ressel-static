@@ -3,6 +3,7 @@
  * Caches application assets for offline functionality
  * 
  * Version History:
+ * 5.2.2 - Borttagen död periodisk versionskoll, query-normalisering för katalog-URL:er
  * 5.2.1 - Buggfixar: säsongsgränser i lokal tid, återställd utgången-varning, robustare uppdatering
  * 5.2.0 - Sommartidtabell 2026 (Emelie + Sjöstadstrafiken)
  * 5.0.1 - Säkerhetshärdning: URL-normalisering för cache-hygien
@@ -13,7 +14,7 @@
  * 1.0.0 - Original service worker
  */
 
-const APP_VERSION = '5.2.1';
+const APP_VERSION = '5.2.2';
 const CACHE_NAME = `resseltrafiken-v${APP_VERSION}`;
 const JSON_CACHE_NAME = `resseltrafiken-json-v${APP_VERSION}`;
 
@@ -58,13 +59,20 @@ function normalizeURL(url) {
     
     // För JSON-filer och statiska assets: behåll bara pathname
     // (ta bort query-parametrar som ?_nocache=timestamp)
-    if (urlObj.pathname.endsWith('.json') || 
+    if (urlObj.pathname.endsWith('.json') ||
         urlObj.pathname.endsWith('.js') ||
         urlObj.pathname.endsWith('.css') ||
         urlObj.pathname.endsWith('.html')) {
       return urlObj.origin + urlObj.pathname;
     }
-    
+
+    // Katalog-URL:er (t.ex. './?sjo=1' från manifest-genvägarna): ta bort
+    // query-strängen så att alla varianter träffar samma cachade './'-post
+    // i stället för att skapa en dubblett per parameterkombination
+    if (urlObj.pathname.endsWith('/')) {
+      return urlObj.origin + urlObj.pathname;
+    }
+
     // För andra resurser, behåll original
     return url;
   } catch (e) {
@@ -154,10 +162,10 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Periodic version check (every hour)
-setInterval(() => {
-  checkVersion();
-}, 3600000); // 1 hour
+// OBS: ingen periodisk versionskontroll här — service workers avslutas efter
+// sekunder av inaktivitet så en setInterval på toppnivå kör i praktiken aldrig.
+// Versionskontrollen sköts av sidan (checkForVersionUpdates i app.js) samt av
+// checkVersion() vid activate/message ovan.
 
 // Fetch event - network-first for JSON, cache-first for static assets
 // SÄKERHETSHÄRDAD: URL-normalisering för cache-nycklar

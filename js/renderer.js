@@ -6,6 +6,7 @@
  * highlight-effekter för avgångar.
  * 
  * Versionshistorik:
+ * 5.2.2 - Borttagen död showUpdateNotification (app.js/init.js äger uppdaterings-UI:t)
  * 5.2.1 - Återställd "utgången tidtabell"-varning (försvann i säkerhetshärdningen), nu med textContent
  * 5.0.1 - Säkerhetshärdning: Ersatt innerHTML med textContent/createElement
  * 4.1.0 - Tillagd support för maintenance mode (tillfälliga trafikuppehåll)
@@ -19,7 +20,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.2.1
+ * @version 5.2.2
  * @license MIT
  */
 
@@ -46,55 +47,6 @@ class Renderer {
         const wrapper = document.createElement("div");
         wrapper.className = "MMM-Resseltrafiken";
         return wrapper;
-    }
-
-    /**
-     * Visar uppdateringsmeddelande
-     * SÄKERHETSHÄRDAD: createElement istället för innerHTML
-     * @param {string} newVersion - Ny version tillgänglig
-     */
-    showUpdateNotification(newVersion) {
-        const notification = document.createElement("div");
-        notification.className = "update-banner";
-        notification.setAttribute("role", "alert");
-        
-        const content = document.createElement("div");
-        content.className = "update-banner-content";
-        
-        const message = document.createElement("span");
-        message.textContent = `Ny version (${newVersion}) tillgänglig!`;
-        
-        const updateButton = document.createElement("button");
-        updateButton.className = "update-button";
-        updateButton.textContent = "Uppdatera nu";
-        updateButton.addEventListener("click", () => {
-            // Rensa cache och ladda om sidan
-            if ('caches' in window) {
-                caches.keys().then(cacheNames => {
-                    Promise.all(
-                        cacheNames.map(cacheName => caches.delete(cacheName))
-                    ).then(() => {
-                        window.location.reload(true);
-                    });
-                });
-            } else {
-                window.location.reload(true);
-            }
-        });
-        
-        content.appendChild(message);
-        content.appendChild(updateButton);
-        notification.appendChild(content);
-        
-        // Lägg till notifikationen högst upp i appen
-        const appElement = document.getElementById("app");
-        if (appElement && appElement.firstChild) {
-            appElement.insertBefore(notification, appElement.firstChild);
-        } else if (appElement) {
-            appElement.appendChild(notification);
-        } else {
-            document.body.insertBefore(notification, document.body.firstChild);
-        }
     }
 
     /**
