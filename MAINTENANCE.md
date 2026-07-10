@@ -47,9 +47,10 @@ Bumpa **samma** versionsnummer på alla dessa ställen (sök på gamla numret):
 | Fil | Var |
 |-----|-----|
 | `manifest.json` | `"version"` |
-| `index.html` | `<meta name="version">` **och** `<meta name="app-version">` |
+| `index.html` | `<meta name="version">`, `<meta name="app-version">` **och** versionstexten i `<footer>` |
 | `service-worker.js` | `const APP_VERSION` (driver `CACHE_NAME`/`JSON_CACHE_NAME`) |
 | `js/app.js` | `config.version`, JSDoc `@version`, samt en rad i versionshistoriken |
+| `js/init.js` | `window.APP_VERSION` |
 
 Lägg dessutom till nya datafiler i `service-worker.js → JSON_FILES` (annars cachas de inte för offline).
 

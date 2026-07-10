@@ -3,6 +3,7 @@
  * Caches application assets for offline functionality
  * 
  * Version History:
+ * 5.2.1 - Buggfixar: säsongsgränser i lokal tid, återställd utgången-varning, robustare uppdatering
  * 5.2.0 - Sommartidtabell 2026 (Emelie + Sjöstadstrafiken)
  * 5.0.1 - Säkerhetshärdning: URL-normalisering för cache-hygien
  * 4.1.0 - Maintenance mode support + force update on version change
@@ -12,7 +13,7 @@
  * 1.0.0 - Original service worker
  */
 
-const APP_VERSION = '5.2.0';
+const APP_VERSION = '5.2.1';
 const CACHE_NAME = `resseltrafiken-v${APP_VERSION}`;
 const JSON_CACHE_NAME = `resseltrafiken-json-v${APP_VERSION}`;
 
