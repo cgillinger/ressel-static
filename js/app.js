@@ -6,6 +6,7 @@
  * och hanterar applikationens övergripande livscykel.
  * 
  * Versionshistorik:
+ * 5.3.0 - Hösttidtabell 2026 M/S Emelie (17 aug - 20 sept): ny söndagsfil, vardag/lördag återanvänder generiska filer
  * 5.2.2 - no_traffic-dagar visas som trafikuppehåll, omrendering bevarar fokus och hoppar över oförändrat innehåll, overflow-mätning efter DOM-montering, maintenance-läge nåbart för Sjöstadstrafiken, DST-säker dagsberäkning
  * 5.2.1 - Buggfixar: säsongsgränser jämförs som lokala kalenderdagar (UTC-buggen), återställd utgången-varning, delfel vid laddning slår inte ut visningen, midnattskoll vid visibilitychange
  * 5.2.0 - Sommartidtabell 2026: M/S Emelie (sommar weekday/saturday/sunday) + Sjöstadstrafiken sommarsäsong, midsommar 19-20 juni som söndagstrafik
@@ -25,7 +26,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.2.2
+ * @version 5.3.0
  * @license MIT
  */
 
@@ -61,7 +62,7 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @type {Object}
      */
     const config = {
-        version: '5.2.2',                  // Applikationsversion (uppdatera vid varje ny version)
+        version: '5.3.0',                  // Applikationsversion (uppdatera vid varje ny version)
         updateInterval: 60000,             // Uppdateringsintervall i millisekunder (1 minut)
         dataRefreshInterval: 1800000,      // Uppdatera data från server var 30:e minut
         midnightCheckInterval: 60000,      // Kontrollera midnatt var minut
