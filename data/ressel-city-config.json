@@ -1,13 +1,14 @@
 {
   "_metadata": {
-    "version": "12.0.0",
-    "last_updated": "2026-06-14",
+    "version": "13.0.0",
+    "last_updated": "2026-08-15",
     "description": "FÖRENKLAD struktur - generiska filer för vinter/vår/höst, separata för sommar",
     "data_sources": [
       "CITY LINE VINTER 2024/2025 (PDF)",
       "CITY LINE VINTER 2025/2026 (PDF)",
       "CITY LINE VÅREN 2026 (PDF)",
-      "CITY LINE SOMMAR 2026 (Tidtabell-Emelie-A4-SOMMAR-2026.pdf)"
+      "CITY LINE SOMMAR 2026 (Tidtabell-Emelie-A4-SOMMAR-2026.pdf)",
+      "CITY LINE HÖST 2026 (Tidtabell-Emelie-A4-HOST-2026.pdf)"
     ],
     "update_cycle": "Generic files reused across similar seasons",
     "validation_rules": [
@@ -162,6 +163,19 @@
         "weekend_schedule": ["2026-06-19", "2026-06-20"]
       },
       "note": "Sommartidtabell. Midsommarafton 19 juni (fredag) och midsommardagen 20 juni (lördag) trafikeras enligt söndagstidtabell (weekend_schedule → files.sunday)."
+    },
+    {
+      "name": "Autumn 2026",
+      "period": {
+        "start": "2026-08-17",
+        "end": "2026-09-20"
+      },
+      "files": {
+        "weekday": "ressel-city-weekday-winter.json",
+        "saturday": "ressel-city-spring-saturday.json",
+        "sunday": "ressel-city-autumn-sunday.json"
+      },
+      "note": "Höst 17 aug - 20 sept 2026. Vardag och lördag återanvänder generiska filer (lunch 13:44 visas alltid, som våren). Söndag har egen fil - en tur färre än våren. PDF:ens 10:32/10:40 (Masthamnen/Djurgården 10-turen vardag) bedömt som tryckfel, följer mönstret 10:28/10:38. Inga röda dagar i perioden."
     }
   ]
 }
