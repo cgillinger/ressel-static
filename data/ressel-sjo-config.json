@@ -1,12 +1,13 @@
 {
   "_metadata": {
-    "version": "8.0.0",
-    "last_updated": "2026-06-14",
+    "version": "8.1.0",
+    "last_updated": "2026-08-15",
     "description": "FÖRENKLAD struktur - 3 generiska filer istället för 6 säsongsspecifika",
     "data_sources": [
       "Avgångstider Barnängsbryggan (PDF)",
       "Avgångstider Lumabryggan (PDF)",
-      "Avgångstider Henriksdalsbryggan (PDF)"
+      "Avgångstider Henriksdalsbryggan (PDF)",
+      "ressel.se/sjostadstrafiken HTML-tabeller, hämtad 2026-08-15 (höst/vinter 2026-2027 verifierad identisk med generiska filer)"
     ],
     "calculation_systems": {
       "pattern": "Triangular route with 5 minute offset between stops",
@@ -106,7 +107,7 @@
       "period": {
         "start": "2026-08-17",
         "end": "2099-12-31",
-        "note": "Återgår till standard med rusningstrafik"
+        "note": "Återgår till standard med rusningstrafik. Bekräftad mot ressel.se 2026-08-15: operatörens period gäller 17 aug 2026 - 25 juni 2027, tiderna identiska med de generiska filerna. Öppet slut (2099) behålls enligt underhållsrutinen - kapas när sommartidtabell 2027 läggs in."
       },
       "files": {
         "weekday": "ressel-sjo-weekday-standard.json",
