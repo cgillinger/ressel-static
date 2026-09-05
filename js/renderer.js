@@ -6,6 +6,8 @@
  * highlight-effekter för avgångar.
  * 
  * Versionshistorik:
+ * 5.4.0 - "Inga fler avgångar" när allt passerat; snar-avgång-markering och uppläsning
+ *         använder minutesUntil så att nattturer (00:05 kl 23:58) hanteras rätt
  * 5.2.2 - Borttagen död showUpdateNotification (app.js/init.js äger uppdaterings-UI:t)
  * 5.2.1 - Återställd "utgången tidtabell"-varning (försvann i säkerhetshärdningen), nu med textContent
  * 5.0.1 - Säkerhetshärdning: Ersatt innerHTML med textContent/createElement
@@ -20,7 +22,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.2.2
+ * @version 5.4.0
  * @license MIT
  */
 
@@ -199,15 +201,10 @@ class Renderer {
                 });
             }
             
-            // Avgör om det är en snar avgång (inom 10 minuter)
-            const [hours, minutes] = firstTime.time.split(":").map(Number);
-            const timeInMinutes = hours * 60 + minutes;
-            
-            const now = new Date();
-            const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
-            const diffMinutes = timeInMinutes - currentTimeInMinutes;
-            
-            const isImminentDeparture = firstTime.isToday && diffMinutes >= 0 && diffMinutes < 10;
+            // Avgör om det är en snar avgång (inom 10 minuter). minutesUntil från
+            // TimeHandler tar hänsyn till dygnsgränsen (00:05 kl 23:58 = 7 min)
+            const diffMinutes = this.minutesUntilDeparture(firstTime);
+            const isImminentDeparture = diffMinutes >= 0 && diffMinutes < 10;
             
             // Skapa meddelande baserat på om det är "Endast avstigning" och/eller snar avgång
             let message = "";
@@ -299,7 +296,7 @@ class Renderer {
         // Om inga tider finns, visa ett meddelande
         if (!times || times.length === 0) {
             const noTimesSpan = document.createElement("span");
-            noTimesSpan.textContent = "Inga avgångar";
+            noTimesSpan.textContent = "Inga fler avgångar";
             noTimesSpan.style.fontStyle = "italic";
             timesElement.appendChild(noTimesSpan);
         } else {
@@ -313,7 +310,8 @@ class Renderer {
                     timeObj.isToday, 
                     (index === 0 && isHighlighted && (hasRemainingTodayDepartures || !timeObj.isToday)),  // Markera även första morgondagens avgång
                     this.isDisembarkOnlyTime(stop, timeObj, disembarkOnlyToday, disembarkOnlyTomorrow),
-                    hasRemainingTodayDepartures
+                    hasRemainingTodayDepartures,
+                    this.minutesUntilDeparture(timeObj)
                 );
                 timesElement.appendChild(timeElement);
             });
@@ -321,6 +319,21 @@ class Renderer {
         
         row.appendChild(timesElement);
         return row;
+    }
+
+    /**
+     * Minuter till en avgång. Använder TimeHandlers minutesUntil när det finns
+     * (korrekt över dygnsgränsen), annars jämförelse av klockslag inom dagen.
+     * @param {Object} timeObj - Tidsobjekt med .time, .isToday och ev. .minutesUntil
+     * @returns {number} Minuter till avgång (negativt om passerad)
+     */
+    minutesUntilDeparture(timeObj) {
+        if (typeof timeObj.minutesUntil === 'number') {
+            return timeObj.minutesUntil;
+        }
+        const [hours, minutes] = timeObj.time.split(":").map(Number);
+        const now = new Date();
+        return hours * 60 + minutes - (now.getHours() * 60 + now.getMinutes());
     }
 
     /**
@@ -371,20 +384,16 @@ class Renderer {
      * @param {boolean} isNextDeparture - Om detta är nästa avgång
      * @param {boolean} isDisembarkOnly - Om detta är "Endast avstigning"
      * @param {boolean} hasRemainingTodayDepartures - Om det finns kvarvarande avgångar för idag
+     * @param {number} [minutesUntil] - Minuter till avgång (från TimeHandler); beräknas annars ur klockslaget
      * @returns {HTMLElement} Tidselement
      */
-    createTimeElement(time, isToday, isNextDeparture, isDisembarkOnly, hasRemainingTodayDepartures) {
+    createTimeElement(time, isToday, isNextDeparture, isDisembarkOnly, hasRemainingTodayDepartures, minutesUntil) {
         const timeElement = document.createElement("span");
         timeElement.textContent = time;
         timeElement.className = "time";
         
-        // Hitta tidsskillnad för att avgöra om det är inom 10 minuter
-        const [hours, minutes] = time.split(":").map(Number);
-        const timeInMinutes = hours * 60 + minutes;
-        
-        const now = new Date();
-        const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
-        const diffMinutes = timeInMinutes - currentTimeInMinutes;
+        // Tidsskillnad för att avgöra om det är inom 10 minuter
+        const diffMinutes = this.minutesUntilDeparture({ time, isToday, minutesUntil });
         
         // Lägg till klasser baserat på om det är morgondagens tid
         if (!isToday) {
@@ -393,16 +402,14 @@ class Renderer {
         
         // Highlight-logik för nästa avgång
         if (isNextDeparture) {
-            // Om det är dagens tid eller om den är morgondagens första tid och det inte finns några kvarvarande idag
-            if (isToday) {
+            if (diffMinutes >= 0 && diffMinutes < 10) {
+                // Snar avgång — gäller även en nattur som går strax efter midnatt
+                timeElement.classList.add("highlight-yellow");
+            } else if (isToday && diffMinutes >= 0) {
                 // Normal highlight för dagens avgångar
-                if (diffMinutes < 10 && diffMinutes >= 0) {
-                    timeElement.classList.add("highlight-yellow");
-                } else if (diffMinutes >= 0) {
-                    timeElement.classList.add("highlight-green");
-                }
-            } else if (!hasRemainingTodayDepartures) {
-                // Om det inte finns några avgångar kvar idag, markera morgondagens första avgång med grön ram
+                timeElement.classList.add("highlight-green");
+            } else if (!isToday && !hasRemainingTodayDepartures) {
+                // Inga avgångar kvar idag: markera morgondagens första avgång med grön ram
                 timeElement.classList.add("highlight-green");
             }
         }
