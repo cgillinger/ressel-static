@@ -6,6 +6,8 @@
  * och hanterar applikationens övergripande livscykel.
  * 
  * Versionshistorik:
+ * 5.4.0 - Rättade tidsfel (KNOWN-BUGS): turer efter midnatt räknas till rätt trafikdygn (gårdagens fil
+ *         laddas), passerade avgångar visas aldrig som kommande, Sjöstadstrafiken följer holiday_rules
  * 5.3.0 - Hösttidtabell 2026 M/S Emelie (17 aug - 20 sept): ny söndagsfil, vardag/lördag återanvänder generiska filer
  * 5.2.2 - no_traffic-dagar visas som trafikuppehåll, omrendering bevarar fokus och hoppar över oförändrat innehåll, overflow-mätning efter DOM-montering, maintenance-läge nåbart för Sjöstadstrafiken, DST-säker dagsberäkning
  * 5.2.1 - Buggfixar: säsongsgränser jämförs som lokala kalenderdagar (UTC-buggen), återställd utgången-varning, delfel vid laddning slår inte ut visningen, midnattskoll vid visibilitychange
@@ -26,7 +28,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.3.0
+ * @version 5.4.0
  * @license MIT
  */
 
@@ -62,7 +64,7 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @type {Object}
      */
     const config = {
-        version: '5.3.0',                  // Applikationsversion (uppdatera vid varje ny version)
+        version: '5.4.0',                  // Applikationsversion (uppdatera vid varje ny version)
         updateInterval: 60000,             // Uppdateringsintervall i millisekunder (1 minut)
         dataRefreshInterval: 1800000,      // Uppdatera data från server var 30:e minut
         midnightCheckInterval: 60000,      // Kontrollera midnatt var minut
@@ -76,6 +78,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         cityHighlightStop: "Lumabryggan",  // Hållplats att markera för citylinjen (till city)
         cityReturnStop: "Nybroplan",       // Returhållplats att markera för cityriktning
         maxVisibleDepartures: 7,           // Standardantal synliga avgångar per hållplats
+        dayRolloverTime: '03:00',          // Tider före detta klockslag tillhör föregående trafikdygn (nattturer, t.ex. 00:05)
         dataPaths: {                       // Sökvägar till konfigurationsfiler
             sjoConfig: './data/ressel-sjo-config.json',
             cityConfig: './data/ressel-city-config.json'
@@ -197,6 +200,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 fromCity: null
             }
         },
+        // Gårdagens fil behövs för nattturer: kl 00:02 ligger båten 00:05 i
+        // gårdagens lista (dess svans), inte i dagens
+        yesterday: {
+            sjo: null,
+            city: null
+        },
         config: {
             sjo: null,
             city: null
@@ -253,6 +262,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         const dayNumber = getDayNumber(date);
         let dayOffset = 0;
+
+        // Turer efter midnatt (t.ex. "00:05") står sist i *dagens* lista men går
+        // först nästa kalenderdygn. Allt före dayRolloverTime flyttas därför en
+        // dag framåt — annars räknas 00:05 som passerad hela dagen (KNOWN-BUGS fel 1).
+        const rolloverMinutes = timeHandler.timeToMinutes(config.dayRolloverTime);
+        const nextDate = new Date(date);
+        nextDate.setDate(nextDate.getDate() + 1);
+        const nextDayNumber = getDayNumber(nextDate);
         
         // Beräkna dagsförskjutning baserat på datum
         if (date.toDateString() !== currentDate.toDateString()) {
@@ -269,12 +286,61 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         }
         
-        return times.map(time => ({
-            time: time,
-            isToday: dayOffset === 0,
-            day: dayNumber,
-            dayOffset: dayOffset
-        }));
+        return times.map(time => {
+            const rolledOver = timeHandler.timeToMinutes(time) < rolloverMinutes;
+            const effectiveOffset = rolledOver ? dayOffset + 1 : dayOffset;
+            return {
+                time: time,
+                isToday: effectiveOffset === 0,
+                day: rolledOver ? nextDayNumber : dayNumber,
+                dayOffset: effectiveOffset,
+                rolledOver: rolledOver
+            };
+        });
+    }
+
+    /**
+     * Plockar ut de av gårdagens tider som hör till dagens trafikdygn
+     * (turer efter midnatt). Övriga gårdagstider är passerade och ointressanta.
+     * @param {Array<string>} times Gårdagens tidssträngar
+     * @param {Date} yesterday Gårdagens datum
+     * @param {Date} currentDate Aktuellt datum
+     * @returns {Array<Object>} Tidsobjekt med dayOffset 0
+     */
+    function createRolloverTimeObjects(times, yesterday, currentDate) {
+        return createEnhancedTimeObjects(times, yesterday, currentDate)
+            .filter(t => t.rolledOver);
+    }
+
+    /**
+     * Returnerar avgångarna per hållplats för en riktning i en city-fil,
+     * oavsett om filen är platt (departures) eller nästlad (morning/lunch/afternoon)
+     * @param {Object} direction to_city eller from_city
+     * @returns {Object} { hållplats: [tider] }
+     */
+    function getDirectionDepartures(direction) {
+        if (!direction) return {};
+        return direction.departures ? direction.departures : mergeCityLineDepartures(direction);
+    }
+
+    /**
+     * Slår ihop gårdagens nattturer, dagens och morgondagens tider för en hållplats
+     * och plockar ut de kommande avgångarna
+     * @param {Object} params
+     * @returns {Array<Object>} Bearbetade avgångar
+     */
+    function buildStopDepartures({ stop, todayTimes, tomorrowDepartures, yesterdayDepartures, now, tomorrow, yesterday }) {
+        const today = createEnhancedTimeObjects(todayTimes, now, now);
+        const tomorrowTimes = tomorrowDepartures && tomorrowDepartures[stop]
+            ? createEnhancedTimeObjects(tomorrowDepartures[stop], tomorrow, now)
+            : [];
+        const rolloverTimes = yesterdayDepartures && yesterdayDepartures[stop]
+            ? createRolloverTimeObjects(yesterdayDepartures[stop], yesterday, now)
+            : [];
+        return timeHandler.processScheduleTimes(
+            [...rolloverTimes, ...today, ...tomorrowTimes],
+            config.maxVisibleDepartures
+        );
     }
 
     /**
@@ -720,15 +786,21 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             }
             
+            // Röda dagar och aftnar körs som helg ("Röda dagar trafikeras som helg").
+            // Listan ligger på rotnivå i sjo-configen eftersom sjo-säsongerna är
+            // öppna/generiska — se MAINTENANCE.md.
+            const sjoHolidayRules = configData.sjo.holiday_rules || {};
+            const sjoIsHoliday = Array.isArray(sjoHolidayRules.weekend_schedule) &&
+                sjoHolidayRules.weekend_schedule.includes(dateStr);
+            const sjoUsesWeekend = sjoIsHoliday || dayType === "saturday" || dayType === "sunday";
+
             // Använd hittad säsong eller senaste tillgängliga
             if (sjoSeason) {
-                result.sjo = dayType === "saturday" || dayType === "sunday" ? 
-                    sjoSeason.files.weekend : sjoSeason.files.weekday;
+                result.sjo = sjoUsesWeekend ? sjoSeason.files.weekend : sjoSeason.files.weekday;
                 result.sjoExpired = false;
             } else if (sjoLatestSeason) {
                 // Tidtabellen har gått ut - använd senaste tillgängliga
-                result.sjo = dayType === "saturday" || dayType === "sunday" ? 
-                    sjoLatestSeason.files.weekend : sjoLatestSeason.files.weekday;
+                result.sjo = sjoUsesWeekend ? sjoLatestSeason.files.weekend : sjoLatestSeason.files.weekday;
                 result.sjoExpired = true;
                 result.sjoExpiryDate = sjoLatestSeason.period.end;
             }
@@ -1543,6 +1615,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     function renderSjostadsTimetable(wrapper) {
         const sjoData = timetableData.today.sjo;
         const sjoTomorrow = timetableData.tomorrow.sjo;
+        const sjoYesterday = timetableData.yesterday.sjo;
         const isExpired = timetableData.today.isExpired.sjo;
         const expiryDate = timetableData.today.expiryDate.sjo;
         
@@ -1555,22 +1628,17 @@ document.addEventListener('DOMContentLoaded', async function() {
             const now = new Date();
             const tomorrow = new Date(now);
             tomorrow.setDate(tomorrow.getDate() + 1);
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
 
             for (const [stop, times] of Object.entries(sjoData.departures || {})) {
-                // Skapa array med dagens tider med dagsinformation
-                const todayTimes = createEnhancedTimeObjects(times, now, now);
-                
-                // Lägg till morgondagens tider (om vi har dem och de behövs)
-                let tomorrowTimes = [];
-                if (sjoTomorrow && sjoTomorrow.departures && sjoTomorrow.departures[stop]) {
-                    tomorrowTimes = createEnhancedTimeObjects(sjoTomorrow.departures[stop], tomorrow, now);
-                }
-                
-                // Kombinera båda arrayerna
-                processedDepartures[stop] = timeHandler.processScheduleTimes(
-                    [...todayTimes, ...tomorrowTimes], 
-                    config.maxVisibleDepartures
-                );
+                processedDepartures[stop] = buildStopDepartures({
+                    stop,
+                    todayTimes: times,
+                    tomorrowDepartures: sjoTomorrow && sjoTomorrow.departures,
+                    yesterdayDepartures: sjoYesterday && sjoYesterday.departures,
+                    now, tomorrow, yesterday
+                });
             }
 
             // Skicka tomt som dayTypeText för att inte visa det
@@ -1667,6 +1735,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Är morgondagen trafikfri ska dess tider inte flätas in i listorna
         const tomorrowNoTraffic = timetableData.tomorrow.noTraffic && timetableData.tomorrow.noTraffic.city;
         const cityTomorrow = tomorrowNoTraffic ? null : timetableData.tomorrow.city;
+        // Gårdagens fil bidrar bara med ev. nattturer — var den trafikfri finns inga
+        const yesterdayNoTraffic = timetableData.yesterday.noTraffic && timetableData.yesterday.noTraffic.city;
+        const cityYesterday = yesterdayNoTraffic ? null : timetableData.yesterday.city;
 
         const dayTypeText = cityData.metadata.day_type === 'weekday' ? 'Vardagar' : 
                            (cityData.metadata.day_type === 'saturday' ? 'Lördagar' : 'Söndagar');
@@ -1674,47 +1745,25 @@ document.addEventListener('DOMContentLoaded', async function() {
         const now = new Date();
         const tomorrow = new Date(now);
         tomorrow.setDate(tomorrow.getDate() + 1);
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
         
         // TO CITY
         if (cityData.to_city) {
-            let toCityDepartures;
+            // Hantera olika filstrukturer (platt eller nästlad morgon/lunch/eftermiddag)
+            const toCityDepartures = getDirectionDepartures(cityData.to_city);
+            const tomorrowToCity = cityTomorrow ? getDirectionDepartures(cityTomorrow.to_city) : null;
+            const yesterdayToCity = cityYesterday ? getDirectionDepartures(cityYesterday.to_city) : null;
             
-            // Hantera olika filstrukturer (ibland nästlade, ibland flata)
-            if (cityData.to_city.departures) {
-                // Helgstruktur i vårformat
-                toCityDepartures = cityData.to_city.departures;
-            } else {
-                // Vardagsstruktur med morgon/eftermiddagsperioder
-                toCityDepartures = mergeCityLineDepartures(cityData.to_city);
-            }
-            
-            // Bearbeta dagens avgångar
             const processedToCity = {};
             for (const [stop, times] of Object.entries(toCityDepartures)) {
-                // Skapa array med dagens tider med dagsinformation
-                const todayTimes = createEnhancedTimeObjects(times, now, now);
-                
-                // Hämta morgondagens tider om tillgängliga
-                let tomorrowTimes = [];
-                if (cityTomorrow && cityTomorrow.to_city) {
-                    let tomorrowDepartures;
-                    
-                    if (cityTomorrow.to_city.departures) {
-                        tomorrowDepartures = cityTomorrow.to_city.departures;
-                    } else {
-                        tomorrowDepartures = mergeCityLineDepartures(cityTomorrow.to_city);
-                    }
-                    
-                    if (tomorrowDepartures[stop]) {
-                        tomorrowTimes = createEnhancedTimeObjects(tomorrowDepartures[stop], tomorrow, now);
-                    }
-                }
-                
-                // Kombinera och bearbeta
-                processedToCity[stop] = timeHandler.processScheduleTimes(
-                    [...todayTimes, ...tomorrowTimes], 
-                    config.maxVisibleDepartures
-                );
+                processedToCity[stop] = buildStopDepartures({
+                    stop,
+                    todayTimes: times,
+                    tomorrowDepartures: tomorrowToCity,
+                    yesterdayDepartures: yesterdayToCity,
+                    now, tomorrow, yesterday
+                });
             }
 
             // Hämta "Endast avstigning" tider för dagens och morgondagens TO_CITY
@@ -1741,44 +1790,19 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // FROM CITY (om aktiverat)
         if (config.showBothDirections && cityData.from_city) {
-            let fromCityDepartures;
+            const fromCityDepartures = getDirectionDepartures(cityData.from_city);
+            const tomorrowFromCity = cityTomorrow ? getDirectionDepartures(cityTomorrow.from_city) : null;
+            const yesterdayFromCity = cityYesterday ? getDirectionDepartures(cityYesterday.from_city) : null;
             
-            // Hantera olika filstrukturer
-            if (cityData.from_city.departures) {
-                // Helgstruktur i vårformat
-                fromCityDepartures = cityData.from_city.departures;
-            } else {
-                // Vardagsstruktur med morgon/eftermiddagsperioder
-                fromCityDepartures = mergeCityLineDepartures(cityData.from_city);
-            }
-            
-            // Bearbeta dagens och morgondagens avgångar
             const processedFromCity = {};
             for (const [stop, times] of Object.entries(fromCityDepartures)) {
-                // Skapa array med dagens tider med dagsinformation
-                const todayTimes = createEnhancedTimeObjects(times, now, now);
-                
-                // Hämta morgondagens tider om tillgängliga
-                let tomorrowTimes = [];
-                if (cityTomorrow && cityTomorrow.from_city) {
-                    let tomorrowDepartures;
-                    
-                    if (cityTomorrow.from_city.departures) {
-                        tomorrowDepartures = cityTomorrow.from_city.departures;
-                    } else {
-                        tomorrowDepartures = mergeCityLineDepartures(cityTomorrow.from_city);
-                    }
-                    
-                    if (tomorrowDepartures[stop]) {
-                        tomorrowTimes = createEnhancedTimeObjects(tomorrowDepartures[stop], tomorrow, now);
-                    }
-                }
-                
-                // Kombinera och bearbeta
-                processedFromCity[stop] = timeHandler.processScheduleTimes(
-                    [...todayTimes, ...tomorrowTimes], 
-                    config.maxVisibleDepartures
-                );
+                processedFromCity[stop] = buildStopDepartures({
+                    stop,
+                    todayTimes: times,
+                    tomorrowDepartures: tomorrowFromCity,
+                    yesterdayDepartures: yesterdayFromCity,
+                    now, tomorrow, yesterday
+                });
             }
 
             // Hämta "Endast avstigning" tider för både dagens och morgondagens FROM_CITY
@@ -1849,6 +1873,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             const now = new Date();
             const tomorrow = new Date(now);
             tomorrow.setDate(tomorrow.getDate() + 1);
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
             
             // Om konfigurationsdata inte är laddat än, ladda det
             if (!timetableData.config.sjo || !timetableData.config.city) {
@@ -1859,15 +1885,23 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             }
             
-            // Ladda dagens och morgondagens tidtabeller
-            const [todayData, tomorrowData] = await Promise.all([
+            // Ladda gårdagens, dagens och morgondagens tidtabeller.
+            // Gårdagen behövs bara för nattturer (00:05 kl 00:02), morgondagen
+            // för att fylla på listan efter sista turen.
+            const [yesterdayData, todayData, tomorrowData] = await Promise.all([
+                loadTimetableForDate(timetableData.config, yesterday),
                 loadTimetableForDate(timetableData.config, now),
                 loadTimetableForDate(timetableData.config, tomorrow)
             ]);
             
             if (todayData) {
                 timetableData.today = todayData;
-                // Morgondagen är inte kritisk — visa dagens avgångar även om den saknas
+                // Gårdagen och morgondagen är inte kritiska — visa dagens avgångar även om de saknas
+                timetableData.yesterday = yesterdayData || {
+                    sjo: null,
+                    city: null,
+                    noTraffic: { city: false }
+                };
                 timetableData.tomorrow = tomorrowData || {
                     sjo: null,
                     city: null,
@@ -1886,6 +1920,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
                 if (!tomorrowData) {
                     console.warn('Kunde inte ladda morgondagens tidtabell — visar endast dagens avgångar');
+                }
+                if (!yesterdayData) {
+                    console.warn('Kunde inte ladda gårdagens tidtabell — ev. nattturer före dayRolloverTime saknas');
                 }
                 debugLog('Tidtabellsdata laddad framgångsrikt');
             } else if (timetableData.today && timetableData.today.sjo) {

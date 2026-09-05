@@ -5,6 +5,8 @@
  * tidtabellsapplikation. Denna modul hanterar tidskonverteringar och sortering av avgångar.
  * 
  * Versionshistorik:
+ * 4.1.0 - Alla avgångar passerade ger tom lista (inga gamla tider visas som kommande);
+ *         minutesUntil returneras så att renderern kan markera nattturer korrekt
  * 4.0.0 - Förbättrad kompatibilitet med "Endast avstigning"-hantering, versionshantering
  * 3.1.0 - Tagit bort passerade avgångar från visningen; nästa avgång alltid först
  * 3.0.1 - Fixat avdupliceringlogik för att använda uniqueId istället för tid
@@ -13,7 +15,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 4.0.0
+ * @version 4.1.0
  * @license MIT
  */
 
@@ -189,20 +191,22 @@ class TimeHandler {
         // Hitta nästa avgång
         const nextDepartureIndex = uniqueTimes.findIndex(t => !t.isPast);
         
-        let selectedTimes;
+        // Har alla avgångar passerat finns inget att visa. Tidigare returnerades
+        // de sista passerade turerna här, vilket fick dem att se ut som kommande
+        // (KNOWN-BUGS fel 2). Renderern visar i stället "Inga fler avgångar".
         if (nextDepartureIndex === -1) {
-            // Om alla avgångar är passerade, visa de sista
-            selectedTimes = uniqueTimes.slice(-maxDepartures);
-        } else {
-            // FIXAT: Hämta ENDAST nästa avgång och framtida avgångar
-            // Inga passerade avgångar inkluderas alls
-            selectedTimes = uniqueTimes.slice(nextDepartureIndex, nextDepartureIndex + maxDepartures);
+            return [];
         }
 
-        // Returnera slutformat som är kompatibelt med ursprungligt API
+        // Endast nästa avgång och framtida avgångar — inga passerade
+        const selectedTimes = uniqueTimes.slice(nextDepartureIndex, nextDepartureIndex + maxDepartures);
+
+        // Slutformat: bakåtkompatibelt med {time, isToday}; minutesUntil är nytt
+        // och låter renderern avgöra "snar avgång" även för turer efter midnatt
         return selectedTimes.map(t => ({
             time: t.time,
-            isToday: t.isToday
+            isToday: t.isToday,
+            minutesUntil: t.diff
         }));
     }
 }

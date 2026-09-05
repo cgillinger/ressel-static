@@ -16,8 +16,11 @@
 
 1. Bestämmer dagtyp av veckodagen: `saturday` / `sunday` / `weekday`.
 2. Går igenom `season_mapping` och tar **första** säsong där dagens datum ligger i `period.start … period.end`.
-3. För **city**: om datumet finns i `holiday_rules.weekend_schedule` används `files.sunday` (röda dagar/storhelger körs som söndag).
-4. Väljer datafil ur `files[dagtyp]`.
+3. För **city**: om datumet finns i säsongens `holiday_rules.weekend_schedule` används `files.sunday` (röda dagar/storhelger körs som söndag).
+4. För **sjo**: om datumet finns i `holiday_rules.weekend_schedule` på **rotnivå** i `ressel-sjo-config.json` används `files.weekend`. Listan gäller alla säsonger och måste fyllas på årligen (röda dagar + jul-, nyårs- och midsommarafton).
+5. Väljer datafil ur `files[dagtyp]`.
+
+Appen laddar **gårdagens, dagens och morgondagens** fil. Gårdagen behövs för nattturer: tider före `config.dayRolloverTime` (`03:00`, i `js/app.js`) räknas till föregående trafikdygn, så kl 00:02 hämtas båten `00:05` ur gårdagens lista.
 
 **Viktigt om perioderna:**
 - **sjo** har en öppen sista period som slutar `2099-12-31` – den fångar alla framtida datum, så sjo blir aldrig "utgången". När en sommarsäsong läggs in måste man **kapa** den öppna perioden före sommaren och **lägga tillbaka** en ny öppen period efter (se sommar 2026 som exempel).
@@ -64,8 +67,9 @@ Lägg PDF:er / skärmdumpar i `pdf/`. **Den mappen är gitignore:ad och ska aldr
 2. [ ] city: skapa nya datafiler `ressel-city-<säsong>-{weekday,saturday,sunday}.json` om tiderna avviker (annars återanvänd befintlig fil).
 3. [ ] city: lägg till säsong i `season_mapping` (`period`, `files`, ev. `holiday_rules.weekend_schedule` för storhelger).
 4. [ ] sjo: oftast räcker config – kapa den öppna `2099`-perioden, lägg in sommarsäsong, lägg tillbaka ny öppen period. Datafilerna återanvänds normalt.
+   [ ] sjo: kontrollera att `holiday_rules.weekend_schedule` täcker nästa kalenderår (röda dagar + aftnar).
 5. [ ] Lägg nya datafiler i `service-worker.js → JSON_FILES`.
-6. [ ] Bumpa versionen på alla 4 ställena ovan.
+6. [ ] Bumpa versionen på alla **fem** ställena ovan (init.js glömdes i 5.3.0).
 7. [ ] Uppdatera `_metadata.version` + `last_updated` i berörd config, och fil-listan i README.
 8. [ ] Validera JSON och simulera datumval (se nedan).
 9. [ ] Testa lokalt: `python3 -m http.server 8000`.
@@ -83,7 +87,10 @@ genom att spegla logiken i `determineTimetableFiles()` – kontrollera särskilt
 
 ## Kända begränsningar
 
-- **sjo har ingen holiday_rules-logik i koden** (bara city har det). Midsommarafton och röda
-  dagar hanteras därför inte automatiskt för Sjöstadstrafiken – den visar vardagstidtabell
-  även om operatören kör helgtidtabell. Att åtgärda kräver kodändring i `determineTimetableFiles()`,
-  inte bara data. Lämnat orört tills vidare.
+> Se även **[KNOWN-BUGS.md](KNOWN-BUGS.md)** — tre tidigare fel i tidsberäkningen,
+> rättade i v5.4.0, med regressionstest. Kör det när du ändrar säsonger med andra
+> nattturer än idag.
+
+- **sjo-helgdagar är en manuell lista** (`holiday_rules.weekend_schedule` på rotnivå i
+  sjo-configen, ifylld t.o.m. 2027). Glöms påfyllningen visar Sjöstadstrafiken vardagstider
+  på röda dagar igen — utan varning.
