@@ -6,7 +6,7 @@
 
 **Realtidstidtabell för Sjöstadstrafiken och M/S Emelie i Hammarby Sjöstad, Stockholm**
 
-[![Version](https://img.shields.io/badge/version-5.2.0-blue?style=flat-square)](https://github.com/cgillinger/ressel-static/releases)
+[![Version](https://img.shields.io/badge/version-5.4.0-blue?style=flat-square)](https://github.com/cgillinger/ressel-static/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![PWA](https://img.shields.io/badge/PWA-ready-5A0FC8?style=flat-square&logo=pwa&logoColor=white)](https://cgillinger.github.io/ressel-static/)
 [![GitHub Pages](https://img.shields.io/badge/hosted-GitHub%20Pages-222?style=flat-square&logo=github)](https://cgillinger.github.io/ressel-static/)
@@ -368,14 +368,15 @@ ressel-static/
 
 ### Versionshantering
 
-Uppdatera versionsnumret på dessa fyra ställen vid ny release:
+Uppdatera versionsnumret på dessa fem ställen vid ny release:
 
 | Fil | Nyckel |
 |-----|--------|
 | `manifest.json` | `"version"` |
-| `index.html` | `<meta name="version">` |
+| `index.html` | `<meta name="version">`, `<meta name="app-version">`, footer |
 | `service-worker.js` | `APP_VERSION` |
 | `js/app.js` | `version` |
+| `js/init.js` | `window.APP_VERSION` |
 
 ### PWA & Service Worker
 
@@ -409,6 +410,12 @@ DevTools → Application → Service Workers – status ska vara **"activated an
 ## Bidra
 
 Pull requests är välkomna! Öppna gärna en issue först för större ändringar.
+
+### Kända fel
+
+Tidigare fel i tidsberäkningen (nattturer, passerade avgångar, helgdagar för
+Sjöstadstrafiken) rättades i v5.4.0 och är dokumenterade med regressionstest i
+[KNOWN-BUGS.md](KNOWN-BUGS.md).
 
 ### Rapportera buggar
 
