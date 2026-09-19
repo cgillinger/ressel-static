@@ -239,7 +239,8 @@ data/
 ├── ressel-city-summer-weekday.json     ← Vardagar sommar
 ├── ressel-city-summer-saturday.json    ← Lördagar sommar
 ├── ressel-city-summer-sunday.json      ← Söndagar sommar
-└── ressel-city-autumn-sunday.json      ← Söndagar höst
+├── ressel-city-autumn-sunday.json      ← Söndagar höst (17 aug–20 sep)
+└── ressel-city-autumn-saturday.json    ← Lördagar senhöst (21 sep–8 nov)
 ```
 
 ### Konfigurationsfiler
