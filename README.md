@@ -308,42 +308,51 @@ I de flesta fall räcker det med att uppdatera config-filen med nya datum:
 
 Skapa en ny tidtabellsfil bara om avgångstiderna faktiskt avviker från befintliga filer.
 
-### Trafikuppehåll (maintenance mode)
+### Undantag: trafikmeddelanden, uppehåll och ersättningstidtabeller
+
+Tillfälliga avvikelser läggs i listan `exceptions` på **rotnivå** i respektive config
+(`ressel-city-config.json`, `ressel-sjo-config.json`). Säsongerna rörs inte. Första
+undantag vars `period` täcker dagens datum vinner.
 
 <details>
-<summary>Visa hur maintenance mode konfigureras</summary>
-
-**1. Skapa maintenance-fil:**
+<summary>Visa de tre typerna</summary>
 
 ```json
-{
-  "metadata": {
-    "valid_period": { "start": "2026-03-01", "end": "2026-03-15" },
-    "day_type": "weekday",
-    "maintenance_mode": true,
-    "maintenance_message": "Trafiken är tillfälligt inställd. Välkomna åter 16 mars!"
+"exceptions": [
+  {
+    "id": "danvikstull-2026",
+    "type": "notice",
+    "period": { "start": "2026-09-28", "end": "2026-10-11" },
+    "message": "Trafiken kan ställas in med kort varsel på grund av broarbete vid Danvikstull."
   },
-  "to_city": { "departures": {} },
-  "from_city": { "departures": {} }
-}
+  {
+    "id": "broarbete-2025",
+    "type": "no_traffic",
+    "period": { "start": "2025-11-14", "end": "2025-12-12" },
+    "message": "Linjen har tillfälligt uppehåll på grund av broarbeten. Välkomna åter 13 december!"
+  },
+  {
+    "id": "en-bat-2027",
+    "type": "replace",
+    "period": { "start": "2027-02-01", "end": "2027-02-14" },
+    "days": ["weekday"],
+    "files": { "weekday": "ressel-city-weekday-reduced.json" },
+    "message": "Reducerad vardagstrafik 1–14 februari, en båt i trafik."
+  }
+]
 ```
 
-**2. Uppdatera config:**
+| Typ | Effekt |
+|-----|--------|
+| `notice` | Tidtabellen visas som vanligt med `message` under titeln. |
+| `no_traffic` | Inga avgångar. `message` visas i stället. Grann-dagarnas tider flätas inte in. |
+| `replace` | `files[dagtyp]` används i stället för säsongens fil (sjo: `weekday`/`weekend`, city: `weekday`/`saturday`/`sunday`). `message` är valfritt. |
 
-```json
-{
-  "name": "Maintenance March 2026",
-  "period": { "start": "2026-03-01", "end": "2026-03-15" },
-  "files": {
-    "weekday": "ressel-city-maintenance-2026-weekday.json",
-    "saturday": "ressel-city-maintenance-2026-saturday.json",
-    "sunday": "ressel-city-maintenance-2026-sunday.json"
-  },
-  "maintenance_mode": true
-}
-```
+`days` (valfritt) begränsar undantaget till vissa dagtyper. Datum jämförs som lokala
+kalenderdagar, båda ändpunkterna inklusive.
 
-Istället för tidtabell visas meddelandet i appen.
+Det äldre sättet — en egen säsong med `maintenance_mode: true` och tomma datafiler — fungerar
+fortfarande men behövs inte längre.
 </details>
 
 ## Projektstruktur
