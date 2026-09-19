@@ -3,6 +3,7 @@
  * Caches application assets for offline functionality
  * 
  * Version History:
+ * 5.5.0 - Valbar brygga via tryck på bryggnamnet
  * 5.4.0 - Rättade tidsfel: nattturer, tomläge efter sista avgång, sjo-helgdagar
  * 5.3.0 - Hösttidtabell 2026 M/S Emelie (ny söndagsfil i JSON_FILES)
  * 5.2.2 - Borttagen död periodisk versionskoll, query-normalisering för katalog-URL:er
@@ -16,7 +17,7 @@
  * 1.0.0 - Original service worker
  */
 
-const APP_VERSION = '5.4.0';
+const APP_VERSION = '5.5.0';
 const CACHE_NAME = `resseltrafiken-v${APP_VERSION}`;
 const JSON_CACHE_NAME = `resseltrafiken-json-v${APP_VERSION}`;
 

@@ -6,6 +6,7 @@
  * highlight-effekter för avgångar.
  * 
  * Versionshistorik:
+ * 5.5.0 - Bryggan är valbar med touch/klick/tangentbord (onStopSelected-callback)
  * 5.4.0 - "Inga fler avgångar" när allt passerat; snar-avgång-markering och uppläsning
  *         använder minutesUntil så att nattturer (00:05 kl 23:58) hanteras rätt
  * 5.2.2 - Borttagen död showUpdateNotification (app.js/init.js äger uppdaterings-UI:t)
@@ -22,7 +23,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.4.0
+ * @version 5.5.0
  * @license MIT
  */
 
@@ -61,9 +62,10 @@ class Renderer {
      * @param {Object} disembarkOnlyTomorrow - "Endast avstigning"-tider för imorgon
      * @param {boolean} isExpired - Om tidtabellen har gått ut
      * @param {string} expiryDate - Datum när tidtabellen gick ut (YYYY-MM-DD format)
+     * @param {Function} [onStopSelected] - Anropas med bryggnamnet när användaren trycker på en brygga
      * @returns {HTMLElement} Tidtabellselement
      */
-    createTimetable(timetableData, title, subtitle, highlightStop, disembarkOnlyToday, disembarkOnlyTomorrow, isExpired = false, expiryDate = null) {
+    createTimetable(timetableData, title, subtitle, highlightStop, disembarkOnlyToday, disembarkOnlyTomorrow, isExpired = false, expiryDate = null, onStopSelected = null) {
         const timetable = document.createElement("div");
         timetable.className = "timetable";
 
@@ -115,7 +117,7 @@ class Renderer {
                 const isHighlightedStop = stop === highlightStop;
                 
                 // Skapa rad för hållplatsen
-                const row = this.createStopRow(stop, times, isHighlightedStop, disembarkOnlyToday, disembarkOnlyTomorrow);
+                const row = this.createStopRow(stop, times, isHighlightedStop, disembarkOnlyToday, disembarkOnlyTomorrow, onStopSelected);
                 timetable.appendChild(row);
             });
             
@@ -274,9 +276,10 @@ class Renderer {
      * @param {boolean} isHighlighted - Om denna hållplats ska markeras
      * @param {Object} disembarkOnlyToday - "Endast avstigning"-tider för idag
      * @param {Object} disembarkOnlyTomorrow - "Endast avstigning"-tider för imorgon
+     * @param {Function} [onStopSelected] - Anropas med bryggnamnet vid tryck/Enter på bryggan
      * @returns {HTMLElement} Hållplatsradelement
      */
-    createStopRow(stop, times, isHighlighted, disembarkOnlyToday, disembarkOnlyTomorrow) {
+    createStopRow(stop, times, isHighlighted, disembarkOnlyToday, disembarkOnlyTomorrow, onStopSelected = null) {
         const row = document.createElement("div");
         row.className = "row";
         if (isHighlighted) {
@@ -287,6 +290,28 @@ class Renderer {
         const stopElement = document.createElement("div");
         stopElement.className = "stop";
         stopElement.textContent = stop;
+        stopElement.dataset.stop = stop;
+
+        // Bryggan är valbar med touch/klick/tangentbord. Lyssnaren sitter på
+        // namnet, inte på tidsraden, så den krockar inte med horisontell swipe.
+        if (typeof onStopSelected === 'function') {
+            stopElement.classList.add("stop-selectable");
+            stopElement.setAttribute("role", "button");
+            stopElement.setAttribute("tabindex", "0");
+            stopElement.setAttribute("aria-pressed", isHighlighted ? "true" : "false");
+            stopElement.setAttribute("aria-label", isHighlighted
+                ? `${stop}, vald brygga`
+                : `Välj ${stop} som brygga`);
+            stopElement.addEventListener("click", () => {
+                if (!isHighlighted) onStopSelected(stop);
+            });
+            stopElement.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    if (!isHighlighted) onStopSelected(stop);
+                }
+            });
+        }
         row.appendChild(stopElement);
         
         // Skapa avgångstidsceller
