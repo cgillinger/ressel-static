@@ -6,6 +6,9 @@
  * och hanterar applikationens övergripande livscykel.
  * 
  * Versionshistorik:
+ * 5.7.0 - Generellt undantagssystem: `exceptions` på rotnivå i respektive config med typerna notice
+ *         (tidtabell + meddelande), no_traffic (uppehåll med meddelande) och replace (ersättningsfiler).
+ *         Ersätter behovet av tomma maintenance-filer och egna säsonger för trafikuppehåll.
  * 5.6.0 - Senhösttidtabell 2026 M/S Emelie (21 sep - 8 nov): vardag och söndag återanvänder generiska filer, ny lördagsfil
  * 5.5.0 - Aktiv brygga kan väljas genom att trycka på bryggnamnet i tidtabellen (touch/klick/tangentbord)
  * 5.4.0 - Rättade tidsfel (KNOWN-BUGS): turer efter midnatt räknas till rätt trafikdygn (gårdagens fil
@@ -30,7 +33,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.6.0
+ * @version 5.7.0
  * @license MIT
  */
 
@@ -66,7 +69,7 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @type {Object}
      */
     const config = {
-        version: '5.6.0',                  // Applikationsversion (uppdatera vid varje ny version)
+        version: '5.7.0',                  // Applikationsversion (uppdatera vid varje ny version)
         updateInterval: 60000,             // Uppdateringsintervall i millisekunder (1 minut)
         dataRefreshInterval: 1800000,      // Uppdatera data från server var 30:e minut
         midnightCheckInterval: 60000,      // Kontrollera midnatt var minut
@@ -759,7 +762,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             cityExpired: false,
             sjoExpiryDate: null,
             cityExpiryDate: null,
-            cityNoTraffic: false
+            sjoNoTraffic: false,
+            cityNoTraffic: false,
+            sjoException: null,
+            cityException: null
         };
 
         try {
@@ -807,9 +813,23 @@ document.addEventListener('DOMContentLoaded', async function() {
                 result.sjoExpiryDate = sjoLatestSeason.period.end;
             }
 
+            // Undantag (config.exceptions): meddelande, trafikuppehåll eller ersättningsfiler
+            const sjoException = findException(configData.sjo.exceptions, dateStr, dayType);
+            if (sjoException) {
+                result.sjoException = summarizeException(sjoException);
+                if (sjoException.type === 'no_traffic') {
+                    result.sjoNoTraffic = true;
+                }
+                const sjoKey = sjoUsesWeekend ? 'weekend' : 'weekday';
+                if (sjoException.type === 'replace' && sjoException.files && sjoException.files[sjoKey]) {
+                    result.sjo = sjoException.files[sjoKey];
+                }
+            }
+
             // Hitta lämplig Citylinje-tidtabellfil
             let citySeason = null;
             let cityLatestSeason = null;
+            let cityHoliday = false;
             
             for (const season of configData.city.season_mapping) {
                 // Spara senaste säsongen vi hittar
@@ -825,13 +845,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                         result.cityNoTraffic = true;
                     }
 
-                    // Kontrollera om aktuellt datum är en helgdag som ska använda helgschema
-                    if (season.holiday_rules && season.holiday_rules.weekend_schedule) {
-                        if (season.holiday_rules.weekend_schedule.includes(dateStr)) {
-                            result.city = season.files.sunday;
-                            result.cityExpired = false;
-                            return result;
-                        }
+                    // Röda dagar/storhelger körs som söndag
+                    if (season.holiday_rules && Array.isArray(season.holiday_rules.weekend_schedule) &&
+                        season.holiday_rules.weekend_schedule.includes(dateStr)) {
+                        cityHoliday = true;
                     }
                     
                     citySeason = season;
@@ -840,14 +857,27 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             
             // Använd hittad säsong eller senaste tillgängliga
+            const cityKey = cityHoliday ? 'sunday' : dayType;
             if (citySeason) {
-                result.city = citySeason.files[dayType];
+                result.city = citySeason.files[cityKey];
                 result.cityExpired = false;
             } else if (cityLatestSeason) {
                 // Tidtabellen har gått ut - använd senaste tillgängliga
-                result.city = cityLatestSeason.files[dayType] || cityLatestSeason.files.weekday;
+                result.city = cityLatestSeason.files[cityKey] || cityLatestSeason.files.weekday;
                 result.cityExpired = true;
                 result.cityExpiryDate = cityLatestSeason.period.end;
+            }
+
+            // Undantag (config.exceptions): meddelande, trafikuppehåll eller ersättningsfiler
+            const cityException = findException(configData.city.exceptions, dateStr, dayType);
+            if (cityException) {
+                result.cityException = summarizeException(cityException);
+                if (cityException.type === 'no_traffic') {
+                    result.cityNoTraffic = true;
+                }
+                if (cityException.type === 'replace' && cityException.files && cityException.files[cityKey]) {
+                    result.city = cityException.files[cityKey];
+                }
             }
 
             return result;
@@ -855,6 +885,42 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.error('Fel vid bestämning av tidtabellsfiler:', error);
             return result;
         }
+    }
+
+    /**
+     * Hittar första undantaget i en configs `exceptions`-lista som gäller ett datum.
+     * Ett undantag har `period` {start, end} (lokala ISO-datum, inklusive), `type`
+     * ('notice' | 'no_traffic' | 'replace'), valfritt `message`, valfritt `days`
+     * (delmängd av weekday/saturday/sunday) och för 'replace' ett `files`-objekt
+     * med samma nycklar som säsongens `files`. Se README, avsnitt "Undantag".
+     * @param {Array} exceptions - configData.<linje>.exceptions
+     * @param {string} dateStr - YYYY-MM-DD
+     * @param {string} dayType - 'weekday' | 'saturday' | 'sunday'
+     * @returns {Object|null} Matchande undantag
+     */
+    function findException(exceptions, dateStr, dayType) {
+        if (!Array.isArray(exceptions)) return null;
+        for (const ex of exceptions) {
+            if (!ex || !ex.period || !ex.period.start || !ex.period.end) continue;
+            if (dateStr < ex.period.start || dateStr > ex.period.end) continue;
+            if (Array.isArray(ex.days) && ex.days.length > 0 && !ex.days.includes(dayType)) continue;
+            if (!['notice', 'no_traffic', 'replace'].includes(ex.type)) continue;
+            return ex;
+        }
+        return null;
+    }
+
+    /**
+     * Plockar ut det renderingen behöver ur ett undantag
+     * @param {Object} ex - Undantag ur config
+     * @returns {{id: string|null, type: string, message: string|null}}
+     */
+    function summarizeException(ex) {
+        return {
+            id: typeof ex.id === 'string' ? ex.id : null,
+            type: ex.type,
+            message: typeof ex.message === 'string' && ex.message.trim() ? ex.message.trim() : null
+        };
     }
 
     /**
@@ -911,7 +977,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                     city: timetableFiles.cityExpiryDate
                 },
                 noTraffic: {
+                    sjo: timetableFiles.sjoNoTraffic,
                     city: timetableFiles.cityNoTraffic
+                },
+                exception: {
+                    sjo: timetableFiles.sjoException,
+                    city: timetableFiles.cityException
                 }
             };
         } catch (error) {
@@ -1622,15 +1693,55 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     /**
+     * Kopierar en datafils metadata och lägger till `notice` om undantaget bär ett
+     * meddelande (typ notice/replace). Renderern visar det under titeln.
+     * @param {Object} metadata - Datafilens metadata
+     * @param {Object|null} exception - Dagens undantag för linjen
+     * @returns {Object} Metadata att skicka till renderern
+     */
+    function withNotice(metadata, exception) {
+        const out = Object.assign({}, metadata || {});
+        if (exception && exception.message && exception.type !== 'no_traffic') {
+            out.notice = exception.message;
+        }
+        return out;
+    }
+
+    /**
      * Renderar Sjöstadstrafiken-tidtabell
      * @param {HTMLElement} wrapper - Behållarelementet
      */
     function renderSjostadsTimetable(wrapper) {
         const sjoData = timetableData.today.sjo;
-        const sjoTomorrow = timetableData.tomorrow.sjo;
-        const sjoYesterday = timetableData.yesterday.sjo;
         const isExpired = timetableData.today.isExpired.sjo;
         const expiryDate = timetableData.today.expiryDate.sjo;
+        const sjoException = timetableData.today.exception && timetableData.today.exception.sjo;
+
+        // Trafikuppehåll via undantag i config: visa beskedet i stället för tider
+        if (timetableData.today.noTraffic && timetableData.today.noTraffic.sjo) {
+            const notice = renderer.createTimetable(
+                {
+                    metadata: {
+                        maintenance_mode: true,
+                        maintenance_message: (sjoException && sjoException.message) ||
+                            'Ingen trafik idag — Sjöstadstrafiken gör uppehåll.'
+                    }
+                },
+                "Sjöstadstrafiken",
+                "",
+                null,
+                null,
+                null
+            );
+            wrapper.appendChild(notice);
+            return;
+        }
+
+        // Trafikfria grann-dagar ska inte bidra med tider till listan
+        const tomorrowNoTraffic = timetableData.tomorrow.noTraffic && timetableData.tomorrow.noTraffic.sjo;
+        const sjoTomorrow = tomorrowNoTraffic ? null : timetableData.tomorrow.sjo;
+        const yesterdayNoTraffic = timetableData.yesterday.noTraffic && timetableData.yesterday.noTraffic.sjo;
+        const sjoYesterday = yesterdayNoTraffic ? null : timetableData.yesterday.sjo;
         
         // Rendera även utan departures om filen är i maintenance-läge —
         // annars försvinner hela sektionen i stället för att visa beskedet
@@ -1658,7 +1769,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             const timetable = renderer.createTimetable(
                 {
                     departures: processedDepartures,
-                    metadata: sjoData.metadata  // Krävs för maintenance-läge
+                    // Filens metadata (maintenance-läge) + ev. trafikmeddelande från undantag
+                    metadata: withNotice(sjoData.metadata, sjoException)
                 },
                 "Sjöstadstrafiken",
                 "", // Tomt istället för dayTypeText
@@ -1726,14 +1838,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         const expiryDate = timetableData.today.expiryDate.city;
 
         if (!cityData) return;
+        const cityException = timetableData.today.exception && timetableData.today.exception.city;
 
-        // Trafikfri dag (jul, nyår m.fl.): visa besked i stället för avgångstider
+        // Trafikfri dag (helgdag i holiday_rules.no_traffic eller undantag i config):
+        // visa besked i stället för avgångstider
         if (timetableData.today.noTraffic && timetableData.today.noTraffic.city) {
             const notice = renderer.createTimetable(
                 {
                     metadata: {
                         maintenance_mode: true,
-                        maintenance_message: 'Ingen trafik idag — M/S Emelie gör uppehåll under helgdagen.'
+                        maintenance_message: (cityException && cityException.message) ||
+                            'Ingen trafik idag — M/S Emelie gör uppehåll under helgdagen.'
                     }
                 },
                 "M/S Emelie",
@@ -1788,7 +1903,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             const toCityTable = renderer.createTimetable(
                 { 
                     departures: processedToCity,
-                    metadata: cityData.metadata  // Lägg till metadata här!
+                    // Trafikmeddelandet visas bara på första tabellen
+                    metadata: withNotice(cityData.metadata, cityException)
                 },
                 "M/S Emelie → City",
                 "", // Tomt istället för dayTypeText
@@ -1916,13 +2032,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 timetableData.yesterday = yesterdayData || {
                     sjo: null,
                     city: null,
-                    noTraffic: { city: false }
+                    noTraffic: { sjo: false, city: false }
                 };
                 timetableData.tomorrow = tomorrowData || {
                     sjo: null,
                     city: null,
                     disembarkOnly: { toCity: null, fromCity: null },
-                    noTraffic: { city: false }
+                    noTraffic: { sjo: false, city: false }
                 };
                 timetableData.lastUpdate = now;
 

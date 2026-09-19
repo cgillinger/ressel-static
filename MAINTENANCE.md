@@ -36,11 +36,15 @@ Två tillåtna strukturer (båda stöds av renderern):
 
 Lunch-uppehåll i sommartidtabellen är bara ett **glapp** mellan avgångar – inga tomma poster behövs, hoppa bara över tiderna.
 
-## Trafikuppehåll / arbeten (maintenance mode)
+## Trafikuppehåll, varningar och tillfälliga tidtabeller (`exceptions`)
 
-Separat mekanism, dokumenterad i README (avsnitt "Trafikuppehåll"). En datafil med
-`metadata.maintenance_mode: true` + `maintenance_message`, plus `maintenance_mode: true`
-på säsongen i config. Då visas meddelandet i stället för tidtabell.
+Lägg ett objekt i `exceptions` på rotnivå i linjens config — ingen ny säsong, inga tomma
+datafiler. Tre typer: `notice` (tidtabell + meddelande), `no_traffic` (uppehåll, meddelandet
+visas i stället) och `replace` (andra datafiler under perioden, ev. bara vissa `days`).
+Format och exempel i README, avsnitt "Undantag". Kom ihåg versionsbump även här — det är
+utdata som ändras. `replace`-filer ska in i `service-worker.js → JSON_FILES`.
+
+Det gamla sättet (`maintenance_mode: true` på en säsong + maintenance-filer) stöds fortfarande.
 
 ## Versionsbump (PWA-cache) – OBLIGATORISKT vid varje ändring av utdata
 

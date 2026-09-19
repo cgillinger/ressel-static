@@ -6,6 +6,7 @@
  * highlight-effekter för avgångar.
  * 
  * Versionshistorik:
+ * 5.7.0 - metadata.notice visas som trafikmeddelande under titeln (config exceptions)
  * 5.5.0 - Bryggan är valbar med touch/klick/tangentbord (onStopSelected-callback)
  * 5.4.0 - "Inga fler avgångar" när allt passerat; snar-avgång-markering och uppläsning
  *         använder minutesUntil så att nattturer (00:05 kl 23:58) hanteras rätt
@@ -23,7 +24,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.5.0
+ * @version 5.7.0
  * @license MIT
  */
 
@@ -90,6 +91,19 @@ class Renderer {
 
             expiryWarning.textContent = `⚠️ Denna tidtabell gick ut ${formattedDate}. Tiderna nedan kan vara inaktuella.`;
             timetable.appendChild(expiryWarning);
+        }
+
+        // Trafikmeddelande från config `exceptions` (typ notice/replace):
+        // tidtabellen visas som vanligt med beskedet under titeln
+        if (timetableData && timetableData.metadata && timetableData.metadata.notice &&
+            !timetableData.metadata.maintenance_mode) {
+            const notice = document.createElement("div");
+            notice.className = "notification warning";
+            notice.setAttribute("role", "status");
+            notice.style.marginTop = "10px";
+            notice.style.marginBottom = "15px";
+            notice.textContent = `⚠️ ${timetableData.metadata.notice}`;
+            timetable.appendChild(notice);
         }
 
         // Kontrollera om detta är maintenance mode
