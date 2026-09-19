@@ -571,6 +571,26 @@ body {
     color: var(--color-highlight-green);
 }
 
+/* Selectable Stop (touch/click/keyboard picks the active dock) */
+.MMM-Resseltrafiken .stop.stop-selectable {
+    cursor: pointer;
+    border-radius: var(--border-radius);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background-color var(--transition-speed) ease;
+}
+
+.MMM-Resseltrafiken .stop.stop-selectable:not([aria-pressed="true"]):hover,
+.MMM-Resseltrafiken .stop.stop-selectable:not([aria-pressed="true"]):active {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.MMM-Resseltrafiken .stop.stop-selectable:focus-visible {
+    outline: 2px solid var(--color-highlight-green);
+    outline-offset: -2px;
+}
+
 /* Times Container */
 .MMM-Resseltrafiken .times {
     display: flex;
