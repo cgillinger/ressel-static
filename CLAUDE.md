@@ -37,6 +37,9 @@ HTML/CSS/JS, `data/*.json` är innehållet.
   Inget läser `extra_departures_periods`. Känt och accepterat.
 - **`disembark_only.from_city`** är en markering av tider som redan finns i
   `departures`, inte extra avgångar.
+- **Tillfälliga avvikelser går i `exceptions`** på rotnivå i respektive config
+  (typ `notice`/`no_traffic`/`replace`, se README). Skapa inte en
+  maintenance-säsong med tomma filer för ett trafikuppehåll.
 
 ## Verifiera
 

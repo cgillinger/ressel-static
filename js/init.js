@@ -15,7 +15,7 @@
  */
 
 // Applikationsversion (ska matcha manifest.json och app.js)
-window.APP_VERSION = '5.6.0';
+window.APP_VERSION = '5.7.0';
 
 /**
  * Global felhanterare (SÄKERHETSHÄRDAD)

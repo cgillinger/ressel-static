@@ -1,6 +1,6 @@
 {
   "_metadata": {
-    "version": "13.1.0",
+    "version": "13.2.0",
     "last_updated": "2026-09-19",
     "description": "FÖRENKLAD struktur - generiska filer för vinter/vår/höst, separata för sommar",
     "data_sources": [
@@ -9,7 +9,7 @@
       "CITY LINE VÅREN 2026 (PDF)",
       "CITY LINE SOMMAR 2026 (Tidtabell-Emelie-A4-SOMMAR-2026.pdf)",
       "CITY LINE HÖST 2026 (Tidtabell-Emelie-A4-HOST-2026.pdf)",
-   "CITY LINE HÖST 2026 del 2 (Tidtabell-Emelie-A4-HOST2-2026.pdf)"
+      "CITY LINE HÖST 2026 del 2 (Tidtabell-Emelie-A4-HOST2-2026.pdf)"
     ],
     "update_cycle": "Generic files reused across similar seasons",
     "validation_rules": [
@@ -48,6 +48,15 @@
       "service_stop": "Tisdagar: 09:28, 09:50, 09:56 ingen trafik på grund av service"
     }
   },
+  "exceptions": [
+    {
+      "id": "danvikstull-2026",
+      "type": "notice",
+      "period": { "start": "2026-09-28", "end": "2026-10-11" },
+      "message": "Trafiken kan ställas in med kort varsel 28 september – 11 oktober på grund av planerat broarbete vid Danvikstull. Aktuell trafikinformation finns på ressel.se.",
+      "_source": "Tidtabell-Emelie-A4-HOST2-2026.pdf, OBS-rutan"
+    }
+  ],
   "service_configuration": {
     "stop_sequence": {
       "to_city": [
