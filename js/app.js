@@ -6,6 +6,7 @@
  * och hanterar applikationens övergripande livscykel.
  * 
  * Versionshistorik:
+ * 5.5.0 - Aktiv brygga kan väljas genom att trycka på bryggnamnet i tidtabellen (touch/klick/tangentbord)
  * 5.4.0 - Rättade tidsfel (KNOWN-BUGS): turer efter midnatt räknas till rätt trafikdygn (gårdagens fil
  *         laddas), passerade avgångar visas aldrig som kommande, Sjöstadstrafiken följer holiday_rules
  * 5.3.0 - Hösttidtabell 2026 M/S Emelie (17 aug - 20 sept): ny söndagsfil, vardag/lördag återanvänder generiska filer
@@ -28,7 +29,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.4.0
+ * @version 5.5.0
  * @license MIT
  */
 
@@ -64,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @type {Object}
      */
     const config = {
-        version: '5.4.0',                  // Applikationsversion (uppdatera vid varje ny version)
+        version: '5.5.0',                  // Applikationsversion (uppdatera vid varje ny version)
         updateInterval: 60000,             // Uppdateringsintervall i millisekunder (1 minut)
         dataRefreshInterval: 1800000,      // Uppdatera data från server var 30:e minut
         midnightCheckInterval: 60000,      // Kontrollera midnatt var minut
@@ -1008,8 +1009,14 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             // Bevara tangentbordsfokus över utbytet
             const active = document.activeElement;
-            const focusSelector = active && appElement.contains(active) && active.className ?
+            let focusSelector = active && appElement.contains(active) && active.className ?
                 '.' + String(active.className).trim().split(/\s+/).join('.') : null;
+            let focusIndex = 0;
+            if (focusSelector && active.dataset && active.dataset.stop) {
+                // Samma brygga kan finnas i flera tabeller: matcha på namn och ordning
+                focusSelector += `[data-stop="${CSS.escape(active.dataset.stop)}"]`;
+                focusIndex = Array.from(appElement.querySelectorAll(focusSelector)).indexOf(active);
+            }
 
             appElement.innerHTML = '';
             appElement.appendChild(wrapper);
@@ -1019,7 +1026,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             renderer.setupOverflowObservers(wrapper);
 
             if (focusSelector) {
-                const el = appElement.querySelector(focusSelector);
+                const el = appElement.querySelectorAll(focusSelector)[Math.max(focusIndex, 0)];
                 if (el && typeof el.focus === 'function') el.focus();
             }
 
@@ -1186,12 +1193,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                             value: stop,
                             text: stop
                         })),
-                        onChange: (value) => {
-                            config.highlightStop = value;
-                            updateDisplay(true);
-                            updateURLParameter('highlight', encodeURIComponent(value));
-                            saveConfigToLocalStorage();
-                        }
+                        onChange: (value) => selectHighlightStop('highlightStop', 'highlight', value)
+                    },
+                    {
+                        type: 'info',
+                        id: 'highlight-tip',
+                        label: 'Tips:',
+                        value: 'Du kan också trycka direkt på ett bryggnamn i tidtabellen.'
                     }
                 ]));
             }
@@ -1213,12 +1221,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             value: stop,
                             text: stop
                         })),
-                        onChange: (value) => {
-                            config.cityHighlightStop = value;
-                            updateDisplay(true);
-                            updateURLParameter('cityhighlight', encodeURIComponent(value));
-                            saveConfigToLocalStorage();
-                        }
+                        onChange: (value) => selectHighlightStop('cityHighlightStop', 'cityhighlight', value)
                     },
                     {
                         type: 'select',
@@ -1229,12 +1232,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             value: stop,
                             text: stop
                         })),
-                        onChange: (value) => {
-                            config.cityReturnStop = value;
-                            updateDisplay(true);
-                            updateURLParameter('returnstop', encodeURIComponent(value));
-                            saveConfigToLocalStorage();
-                        }
+                        onChange: (value) => selectHighlightStop('cityReturnStop', 'returnstop', value)
                     }
                 ]));
             }
@@ -1521,6 +1519,20 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @param {string} key - Parameternamn
      * @param {string} value - Parametervärde
      */
+    /**
+     * Byter markerad brygga för en tabell (från dropdown eller tryck på bryggan)
+     * @param {string} configKey - 'highlightStop' | 'cityHighlightStop' | 'cityReturnStop'
+     * @param {string} urlKey - Motsvarande URL-parameter
+     * @param {string} stop - Bryggnamn
+     */
+    function selectHighlightStop(configKey, urlKey, stop) {
+        if (!stop || config[configKey] === stop) return;
+        config[configKey] = stop;
+        updateDisplay(true);
+        updateURLParameter(urlKey, encodeURIComponent(stop));
+        saveConfigToLocalStorage();
+    }
+
     function updateURLParameter(key, value) {
         const url = new URL(window.location);
         url.searchParams.set(key, value);
@@ -1653,7 +1665,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 null,  // Inga "Endast avstigning" tider för Sjöstadstrafiken idag
                 null,  // Inga "Endast avstigning" tider för Sjöstadstrafiken imorgon
                 isExpired,
-                expiryDate
+                expiryDate,
+                (stop) => selectHighlightStop('highlightStop', 'highlight', stop)
             );
             
             wrapper.appendChild(timetable);
@@ -1782,7 +1795,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 disembarkOnlyToCityToday,    // Dagens "Endast avstigning" tider för TO_CITY
                 disembarkOnlyToCityTomorrow, // Morgondagens "Endast avstigning" tider för TO_CITY
                 isExpired,
-                expiryDate
+                expiryDate,
+                (stop) => selectHighlightStop('cityHighlightStop', 'cityhighlight', stop)
             );
             
             wrapper.appendChild(toCityTable);
@@ -1821,7 +1835,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 disembarkOnlyFromCityToday,     // Dagens "Endast avstigning" tider för FROM_CITY
                 disembarkOnlyFromCityTomorrow,  // Morgondagens "Endast avstigning" tider för FROM_CITY
                 isExpired,
-                expiryDate
+                expiryDate,
+                (stop) => selectHighlightStop('cityReturnStop', 'returnstop', stop)
             );
             
             wrapper.appendChild(fromCityTable);
