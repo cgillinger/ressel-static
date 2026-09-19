@@ -1,14 +1,15 @@
 {
   "_metadata": {
-    "version": "13.0.0",
-    "last_updated": "2026-08-15",
+    "version": "13.1.0",
+    "last_updated": "2026-09-19",
     "description": "FÖRENKLAD struktur - generiska filer för vinter/vår/höst, separata för sommar",
     "data_sources": [
       "CITY LINE VINTER 2024/2025 (PDF)",
       "CITY LINE VINTER 2025/2026 (PDF)",
       "CITY LINE VÅREN 2026 (PDF)",
       "CITY LINE SOMMAR 2026 (Tidtabell-Emelie-A4-SOMMAR-2026.pdf)",
-      "CITY LINE HÖST 2026 (Tidtabell-Emelie-A4-HOST-2026.pdf)"
+      "CITY LINE HÖST 2026 (Tidtabell-Emelie-A4-HOST-2026.pdf)",
+   "CITY LINE HÖST 2026 del 2 (Tidtabell-Emelie-A4-HOST2-2026.pdf)"
     ],
     "update_cycle": "Generic files reused across similar seasons",
     "validation_rules": [
@@ -176,6 +177,22 @@
         "sunday": "ressel-city-autumn-sunday.json"
       },
       "note": "Höst 17 aug - 20 sept 2026. Vardag och lördag återanvänder generiska filer (lunch 13:44 visas alltid, som våren). Söndag har egen fil - en tur färre än våren. PDF:ens 10:32/10:40 (Masthamnen/Djurgården 10-turen vardag) bedömt som tryckfel, följer mönstret 10:28/10:38. Inga röda dagar i perioden."
+    },
+    {
+      "name": "Autumn 2026 (late)",
+      "period": {
+        "start": "2026-09-21",
+        "end": "2026-11-08"
+      },
+      "files": {
+        "weekday": "ressel-city-weekday-winter.json",
+        "saturday": "ressel-city-autumn-saturday.json",
+        "sunday": "ressel-city-weekend-winter.json"
+      },
+      "holiday_rules": {
+        "weekend_schedule": []
+      },
+      "note": "Senhöst 21 sept - 8 nov 2026 (Tidtabell-Emelie-A4-HOST2-2026.pdf). Vardag identisk med generisk fil (samma 10:32/10:40-tryckfel som i förra PDF:en). Helgerna nedbantade till timmestrafik: söndag = vinterhelgfilen exakt, lördag = egen fil med en extra sen tur. Alla helgons dag (lör 31 okt) står inte omnämnd i PDF:en - ingen regel inlagd. OBS i PDF: trafiken kan ställas in med kort varsel 28 sept - 11 okt pga broarbete vid Danvikstull."
     }
   ]
 }
