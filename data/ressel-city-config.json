@@ -1,7 +1,7 @@
 {
   "_metadata": {
-    "version": "13.2.0",
-    "last_updated": "2026-09-19",
+    "version": "13.3.0",
+    "last_updated": "2026-09-28",
     "description": "FÖRENKLAD struktur - generiska filer för vinter/vår/höst, separata för sommar",
     "data_sources": [
       "CITY LINE VINTER 2024/2025 (PDF)",
@@ -49,6 +49,13 @@
     }
   },
   "exceptions": [
+    {
+      "id": "danvikstull-2026-uppehall",
+      "type": "no_traffic",
+      "period": { "start": "2026-09-29", "end": "2026-09-30" },
+      "message": "Tillfälligt uppehåll i trafiken från 29 september på grund av planerat broarbete i Danvikskanalen. Arbetet beräknas ta 1–2 dygn men tidsplanen kan ändras. Trafiken återupptas så snart arbetet är slutfört – aktuell trafikinformation finns på ressel.se.",
+      "_source": "Anslag från Ressel vid bryggan 2026-09-28: all Emelie-trafik ställs in från 29 sep, beräknat 1–2 dygn. Slutdatum är en uppskattning – förläng vid behov."
+    },
     {
       "id": "danvikstull-2026",
       "type": "notice",
