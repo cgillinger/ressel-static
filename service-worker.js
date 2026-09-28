@@ -3,6 +3,7 @@
  * Caches application assets for offline functionality
  * 
  * Version History:
+ * 5.7.2 - Förvarning 28 sep om Emelie-uppehållet
  * 5.7.1 - Trafikuppehåll M/S Emelie 29-30 sep 2026 (broarbete Danvikskanalen)
  * 5.7.0 - Undantagssystem (config.exceptions): notice/no_traffic/replace, Danvikstull-notis
  * 5.6.0 - Senhösttidtabell 2026 M/S Emelie (ny lördagsfil i JSON_FILES)
@@ -20,7 +21,7 @@
  * 1.0.0 - Original service worker
  */
 
-const APP_VERSION = '5.7.1';
+const APP_VERSION = '5.7.2';
 const CACHE_NAME = `resseltrafiken-v${APP_VERSION}`;
 const JSON_CACHE_NAME = `resseltrafiken-json-v${APP_VERSION}`;
 
