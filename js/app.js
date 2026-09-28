@@ -6,6 +6,7 @@
  * och hanterar applikationens övergripande livscykel.
  * 
  * Versionshistorik:
+ * 5.7.1 - Trafikuppehåll M/S Emelie 29-30 sep 2026 (no_traffic-undantag, broarbete Danvikskanalen)
  * 5.7.0 - Generellt undantagssystem: `exceptions` på rotnivå i respektive config med typerna notice
  *         (tidtabell + meddelande), no_traffic (uppehåll med meddelande) och replace (ersättningsfiler).
  *         Ersätter behovet av tomma maintenance-filer och egna säsonger för trafikuppehåll.
@@ -33,7 +34,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.7.0
+ * @version 5.7.1
  * @license MIT
  */
 
@@ -69,7 +70,7 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @type {Object}
      */
     const config = {
-        version: '5.7.0',                  // Applikationsversion (uppdatera vid varje ny version)
+        version: '5.7.1',                  // Applikationsversion (uppdatera vid varje ny version)
         updateInterval: 60000,             // Uppdateringsintervall i millisekunder (1 minut)
         dataRefreshInterval: 1800000,      // Uppdatera data från server var 30:e minut
         midnightCheckInterval: 60000,      // Kontrollera midnatt var minut
