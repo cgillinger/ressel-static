@@ -10,9 +10,11 @@ HTML/CSS/JS, `data/*.json` är innehållet.
   `timehandler.js`, `createEnhancedTimeObjects()` eller
   `determineTimetableFiles()`.** Nattturer (`00:05`) hör till föregående
   trafikdygn via `config.dayRolloverTime`; appen laddar igår, idag och imorgon.
-- **[MAINTENANCE.md](MAINTENANCE.md)** — checklista för ny säsong. Versionen
-  ska bumpas på **fem** ställen, annars pinnar gamla PWA-cachar klienterna på
-  den gamla tidtabellen.
+- **[MAINTENANCE.md](MAINTENANCE.md)** — checklista för ny säsong. **Kod**
+  (HTML/JS/CSS/manifest) är cache-first: bumpa versionen på **fem** ställen,
+  annars pinnar gamla PWA-cachar klienterna. **Data** (`data/*.json`) är
+  network-first och kräver ingen bump — en notis i `exceptions` kan redigeras
+  direkt på `main`. Undantag: en *ny* datafil ska in i `JSON_FILES` → bump.
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** — Pages publicerar från `main`, **inte**
   `gh-pages`. `deploy.yml` matar en gren ingen läser. Lägg aldrig till ett
   byggsteg där utan att först läsa filen.

@@ -41,14 +41,30 @@ Lunch-uppehåll i sommartidtabellen är bara ett **glapp** mellan avgångar – 
 Lägg ett objekt i `exceptions` på rotnivå i linjens config — ingen ny säsong, inga tomma
 datafiler. Tre typer: `notice` (tidtabell + meddelande), `no_traffic` (uppehåll, meddelandet
 visas i stället) och `replace` (andra datafiler under perioden, ev. bara vissa `days`).
-Format och exempel i README, avsnitt "Undantag". Kom ihåg versionsbump även här — det är
-utdata som ändras. `replace`-filer ska in i `service-worker.js → JSON_FILES`.
+Format och exempel i README, avsnitt "Undantag".
+
+**Ingen versionsbump behövs för `notice` och `no_traffic`** — se "Vad som kräver
+versionsbump" nedan. Redigera JSON-filen direkt på `main` (t.ex. i GitHubs webbgränssnitt),
+vänta 1–2 min på Pages-deployen, klart. `replace` med en *ny* datafil kräver att filen läggs i
+`service-worker.js → JSON_FILES` (offline-cache) och därmed en bump.
 
 Det gamla sättet (`maintenance_mode: true` på en säsong + maintenance-filer) stöds fortfarande.
 
-## Versionsbump (PWA-cache) – OBLIGATORISKT vid varje ändring av utdata
+## Vad som kräver versionsbump
 
-Appen är en PWA. Utan ny version riskerar klienter att ligga kvar på cachad gammal tidtabell.
+Appen är en PWA med två cachestrategier i `service-worker.js`:
+
+| Filer | Strategi | Kräver bump? |
+|-------|----------|--------------|
+| `data/*.json` | **Network-first** + `_nocache`-parameter i appen. Cachen används bara offline. | **Nej.** Ändringen når alla vid nästa appstart, och öppna appar hämtar om configen var 30:e minut samt när appen blir synlig igen efter minst 5 min (sedan 5.8.1). |
+| `index.html`, `css/`, `js/`, `manifest.json`, ikoner | **Cache-first.** Bara en ny `APP_VERSION` ger ny cache. | **Ja, alltid.** Annars pinnar gamla cachar klienterna på gammal kod. |
+
+Undantag på dataraden: en **ny** datafil (ny säsong, `replace`) ska in i `JSON_FILES` för
+offline-stöd, vilket är en kodändring → bump. Ren redigering av befintliga JSON-filer
+(nya `exceptions`, ändrade tider, ny säsong som återanvänder filer) → ingen bump.
+
+### Så bumpar du
+
 Bumpa **samma** versionsnummer på alla dessa ställen (sök på gamla numret):
 
 | Fil | Var |
