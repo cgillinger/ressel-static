@@ -5,6 +5,9 @@
  * Inkluderar mörkt tema, responsiv design och tillgänglighetsfunktioner.
  * 
  * Versionshistorik:
+ * 5.8.0 - Ljust tema via html[data-theme="light"]. Alla färger är tokens på :root (mörkt är
+ *         standard); ljust läge byter bara tokens. Markeringar använder fyllning i stället för
+ *         glöd i ljust läge. Tabellsiffror i tidkolumnerna.
  * 4.0.0 - Tillagd styling för uppdateringsnotifikationer, versionshantering
  * 3.2.0 - Uppdaterad position av talsyntes-knappen till titelsektionen
  * 3.1.0 - Justerad layout för titelsektionen, borttagna undertitlar
@@ -13,12 +16,17 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 4.0.0
+ * @version 5.8.0
  * @license MIT
  */
 
-/* CSS Custom Properties - Theme Variables */
+/* CSS Custom Properties - Theme Variables
+   Mörkt tema är standard (MagicMirror-arvet). Ljust tema aktiveras med
+   html[data-theme="light"] (js/theme.js) och byter ENBART tokens nedan.
+   Regel: ingen komponent får ha en hårdkodad färg - allt går via tokens. */
 :root {
+    color-scheme: dark;
+
     /* Colors */
     --color-text: #EEEEEE;
     --color-text-dimmed: #666666;
@@ -38,6 +46,25 @@
     --color-update-banner: rgba(0, 128, 255, 0.15);
     --color-update-button: rgba(0, 128, 255, 0.25);
     --color-update-button-hover: rgba(0, 128, 255, 0.35);
+    --color-accent-soft: rgba(0, 255, 0, 0.15);
+    --color-accent-soft-hover: rgba(0, 255, 0, 0.25);
+    --color-title-speech-button: rgba(0, 128, 0, 0.25);
+    --color-overlay: rgba(0, 0, 0, 0.5);
+    --color-shadow: rgba(0, 0, 0, 0.3);
+    --color-rule: rgba(255, 255, 255, 0.1);
+    --color-rule-strong: rgba(255, 255, 255, 0.3);
+    --color-surface-hover: rgba(255, 255, 255, 0.08);
+    --color-control-bg: rgba(255, 255, 255, 0.1);
+    --color-control-bg-hover: rgba(255, 255, 255, 0.15);
+    --color-control-border: rgba(255, 255, 255, 0.2);
+    --color-toggle-knob: #FFFFFF;
+    --color-highlight-green-fill: transparent;
+    --color-highlight-green-glow: rgba(0, 255, 0, 0.3);
+    --color-highlight-yellow-fill: transparent;
+    --color-highlight-yellow-glow: rgba(255, 255, 0, 0.3);
+    --color-warning-bg: rgba(255, 255, 0, 0.1);
+    --color-error-bg: rgba(255, 0, 0, 0.1);
+    --logo-filter: var(--logo-filter);
     
     /* Typography */
     --font-primary: "Roboto Condensed", system-ui, sans-serif;
@@ -61,6 +88,51 @@
     /* Transitions */
     --transition-speed: 0.3s;
     --panel-transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* Ljust tema. Inte en invertering: samma roller (grönt = nästa avgång/aktiv brygga,
+   bärnsten = snar avgång/avstigning/varning, rött = fel) mappade om till färger som
+   klarar WCAG AA mot ljus botten. Neutralerna har en svag grön-grå ton. */
+:root[data-theme="light"] {
+    color-scheme: light;
+
+    --color-text: #1A1A1A;
+    --color-text-dimmed: #5F6663;
+    --color-text-bright: #111111;
+    --color-background: #FAFAF8;
+    --color-highlight-green: #1B7F3B;
+    --color-highlight-yellow: #9A6700;
+    --color-error: #B91C1C;
+    --color-panel-background: #F1F2EF;
+    --color-panel-border: #D5D8D3;
+    --color-speech-button: rgba(27, 127, 59, 0.12);
+    --color-speech-button-hover: rgba(27, 127, 59, 0.2);
+    --color-speech-button-active: rgba(27, 127, 59, 0.35);
+    --color-reset-button: rgba(185, 28, 28, 0.1);
+    --color-reset-button-hover: rgba(185, 28, 28, 0.18);
+    --color-disembark-indicator: #9A6700;
+    --color-update-banner: rgba(29, 78, 216, 0.1);
+    --color-update-button: rgba(29, 78, 216, 0.18);
+    --color-update-button-hover: rgba(29, 78, 216, 0.28);
+    --color-accent-soft: rgba(27, 127, 59, 0.12);
+    --color-accent-soft-hover: rgba(27, 127, 59, 0.2);
+    --color-title-speech-button: rgba(27, 127, 59, 0.18);
+    --color-overlay: rgba(0, 0, 0, 0.35);
+    --color-shadow: rgba(0, 0, 0, 0.12);
+    --color-rule: rgba(0, 0, 0, 0.1);
+    --color-rule-strong: rgba(0, 0, 0, 0.25);
+    --color-surface-hover: rgba(0, 0, 0, 0.05);
+    --color-control-bg: rgba(0, 0, 0, 0.04);
+    --color-control-bg-hover: rgba(0, 0, 0, 0.08);
+    --color-control-border: rgba(0, 0, 0, 0.18);
+    --color-toggle-knob: #FFFFFF;
+    --color-highlight-green-fill: #DCF2E3;
+    --color-highlight-green-glow: transparent;
+    --color-highlight-yellow-fill: #FDF1D6;
+    --color-highlight-yellow-glow: transparent;
+    --color-warning-bg: #FDF1D6;
+    --color-error-bg: #FDE3E3;
+    --logo-filter: brightness(0);
 }
 
 /* Base Styles */
@@ -99,7 +171,7 @@ body {
     padding: 12px;
     text-align: center;
     z-index: 1000;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 -2px 10px var(--color-shadow);
 }
 
 .update-content {
@@ -178,7 +250,7 @@ body {
     width: 30px;
     height: 30px;
     font-size: 16px;
-    background-color: rgba(0, 128, 0, 0.25);
+    background-color: var(--color-title-speech-button);
 }
 
 .speech-button:hover {
@@ -214,7 +286,7 @@ body {
     padding: 10px 15px;
     margin-top: 15px;
     border-radius: var(--border-radius);
-    background-color: rgba(0, 255, 0, 0.15);
+    background-color: var(--color-accent-soft);
     color: var(--color-highlight-green);
     cursor: pointer;
     width: fit-content;
@@ -222,7 +294,7 @@ body {
 }
 
 .settings-button:hover {
-    background-color: rgba(0, 255, 0, 0.25);
+    background-color: var(--color-accent-soft-hover);
 }
 
 .settings-button:focus {
@@ -247,7 +319,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: var(--color-overlay);
     z-index: 999;
     opacity: 0;
     visibility: hidden;
@@ -328,7 +400,7 @@ body {
 }
 
 .settings-button-close {
-    background-color: rgba(0, 255, 0, 0.15);
+    background-color: var(--color-accent-soft);
     color: var(--color-highlight-green);
     border: none;
     padding: 8px 20px;
@@ -340,7 +412,7 @@ body {
 }
 
 .settings-button-close:hover {
-    background-color: rgba(0, 255, 0, 0.25);
+    background-color: var(--color-accent-soft-hover);
 }
 
 /* Reset button styling */
@@ -381,7 +453,7 @@ body {
     font-size: var(--font-size-small);
     color: var(--color-text-dimmed);
     margin: 0 0 10px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--color-rule);
     padding-bottom: 5px;
 }
 
@@ -417,7 +489,7 @@ body {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background-color: var(--color-text-bright);
+    background-color: var(--color-toggle-knob);
     top: 2px;
     left: 2px;
     transition: transform var(--transition-speed) ease;
@@ -445,9 +517,9 @@ body {
 }
 
 .settings-select {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: var(--color-control-bg);
     color: var(--color-text-bright);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--color-control-border);
     border-radius: var(--border-radius);
     padding: 6px 8px;
     font-family: var(--font-primary);
@@ -457,7 +529,7 @@ body {
 }
 
 .settings-select:hover {
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: var(--color-control-bg-hover);
 }
 
 .settings-select:focus {
@@ -527,7 +599,7 @@ body {
     left: 0;
     right: 0;
     height: 1px;
-    background-color: rgba(255, 255, 255, 0.3);
+    background-color: var(--color-rule-strong);
 }
 
 /* Title Icon */
@@ -583,7 +655,7 @@ body {
 
 .MMM-Resseltrafiken .stop.stop-selectable:not([aria-pressed="true"]):hover,
 .MMM-Resseltrafiken .stop.stop-selectable:not([aria-pressed="true"]):active {
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: var(--color-surface-hover);
 }
 
 .MMM-Resseltrafiken .stop.stop-selectable:focus-visible {
@@ -610,6 +682,7 @@ body {
     transition: all var(--transition-speed) ease;
     position: relative; /* Important for absolute positioning of highlight */
     box-sizing: content-box;
+    font-variant-numeric: tabular-nums;
 }
 
 /* Tomorrow Time */
@@ -684,7 +757,8 @@ body {
     /* Create border */
     border: 2px solid var(--color-highlight-green);
     border-radius: var(--border-radius);
-    box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+    background-color: var(--color-highlight-green-fill);
+    box-shadow: 0 0 10px var(--color-highlight-green-glow);
     /* Place behind the text */
     z-index: -1;
     /* Prevent interaction with the border */
@@ -710,7 +784,8 @@ body {
     /* Create border */
     border: 2px solid var(--color-highlight-yellow);
     border-radius: var(--border-radius);
-    box-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
+    background-color: var(--color-highlight-yellow-fill);
+    box-shadow: 0 0 10px var(--color-highlight-yellow-glow);
     /* Place behind the text */
     z-index: -1;
     /* Prevent interaction with the border */
@@ -729,12 +804,12 @@ body {
 
 .MMM-Resseltrafiken .notification.warning {
     color: var(--color-highlight-yellow);
-    background-color: rgba(255, 255, 0, 0.1);
+    background-color: var(--color-warning-bg);
 }
 
 .MMM-Resseltrafiken .notification.error {
     color: var(--color-error);
-    background-color: rgba(255, 0, 0, 0.1);
+    background-color: var(--color-error-bg);
 }
 
 /* Footer Styling */
@@ -748,15 +823,8 @@ footer {
     margin: 0 auto;
 }
 
-/* Force Dark Theme */
-@media (prefers-color-scheme: light) {
-    :root {
-        --color-text: #EEEEEE;
-        --color-text-dimmed: #666666;
-        --color-text-bright: #FFFFFF;
-        --color-background: #000000;
-    }
-}
+/* Temat följer inte systemets prefers-color-scheme: mörkt är standard och
+   ljust väljs manuellt i inställningarna (html[data-theme="light"]). */
 
 /* Responsive Design */
 @media (max-width: 768px) {
