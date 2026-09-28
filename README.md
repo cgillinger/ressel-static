@@ -185,6 +185,7 @@ Klicka på **Inställningar** längst ner i appen:
 2. **Visning** – antal avgångar att visa (3–15)
 3. **Bryggor** – markera din hemmabrygga
 4. **Riktningar** – visa/dölj returresor för M/S Emelie
+5. **Utseende** – ljust tema med vit bakgrund (mörkt är standard)
 
 *Dina val sparas automatiskt i webbläsarens localStorage.*
 

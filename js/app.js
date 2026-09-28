@@ -6,6 +6,8 @@
  * och hanterar applikationens övergripande livscykel.
  * 
  * Versionshistorik:
+ * 5.8.0 - Ljust tema: växlare under Inställningar > Utseende (js/theme.js, html[data-theme]),
+ *         valet sparas separat i localStorage och nollställs av Återställ
  * 5.7.2 - Förvarning 28 sep: notis om att Emelie-trafiken ställs in från 29 sep
  * 5.7.1 - Trafikuppehåll M/S Emelie 29-30 sep 2026 (no_traffic-undantag, broarbete Danvikskanalen)
  * 5.7.0 - Generellt undantagssystem: `exceptions` på rotnivå i respektive config med typerna notice
@@ -35,7 +37,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.7.2
+ * @version 5.8.0
  * @license MIT
  */
 
@@ -71,7 +73,7 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @type {Object}
      */
     const config = {
-        version: '5.7.2',                  // Applikationsversion (uppdatera vid varje ny version)
+        version: '5.8.0',                  // Applikationsversion (uppdatera vid varje ny version)
         updateInterval: 60000,             // Uppdateringsintervall i millisekunder (1 minut)
         dataRefreshInterval: 1800000,      // Uppdatera data från server var 30:e minut
         midnightCheckInterval: 60000,      // Kontrollera midnatt var minut
@@ -358,6 +360,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
             if (localStorage) {
                 localStorage.removeItem('sjostadsfarjetrafiken_settings');
+                if (window.SjoTheme) {
+                    window.SjoTheme.set('dark');
+                }
             }
             
             // Rensa URL-parametrar
@@ -1347,7 +1352,22 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         ]));
         
-        // 6. Lägg till Tillgänglighet-sektion
+        // 6. Lägg till Utseende-sektion (tema hanteras av js/theme.js, sparas separat)
+        if (window.SjoTheme) {
+            panelContent.appendChild(createSettingsSection('Utseende', [
+                {
+                    type: 'toggle',
+                    id: 'theme-toggle',
+                    label: 'Ljust tema (vit bakgrund)',
+                    checked: window.SjoTheme.get() === 'light',
+                    onChange: (checked) => {
+                        window.SjoTheme.set(checked ? 'light' : 'dark');
+                    }
+                }
+            ]));
+        }
+
+        // 7. Lägg till Tillgänglighet-sektion
         panelContent.appendChild(createSettingsSection('Tillgänglighet', [
             {
                 type: 'toggle',
@@ -1363,7 +1383,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         ]));
         
-        // 7. Lägg till App-information sektion
+        // 8. Lägg till App-information sektion
         panelContent.appendChild(createSettingsSection('App-information', [
             {
                 type: 'info',
