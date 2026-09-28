@@ -6,7 +6,7 @@
 
 **Realtidstidtabell för Sjöstadstrafiken och M/S Emelie i Hammarby Sjöstad, Stockholm**
 
-[![Version](https://img.shields.io/badge/version-5.4.0-blue?style=flat-square)](https://github.com/cgillinger/ressel-static/releases)
+[![Version](https://img.shields.io/badge/version-5.8.1-blue?style=flat-square)](https://github.com/cgillinger/ressel-static/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![PWA](https://img.shields.io/badge/PWA-ready-5A0FC8?style=flat-square&logo=pwa&logoColor=white)](https://cgillinger.github.io/ressel-static/)
 [![GitHub Pages](https://img.shields.io/badge/hosted-GitHub%20Pages-222?style=flat-square&logo=github)](https://cgillinger.github.io/ressel-static/)
@@ -356,6 +356,21 @@ Det äldre sättet — en egen säsong med `maintenance_mode: true` och tomma da
 fortfarande men behövs inte längre.
 </details>
 
+### Snabbnotis utan release
+
+En notis (`notice`/`no_traffic`) kräver **ingen versionsbump** och ingen kodändring:
+
+1. Öppna `data/ressel-city-config.json` (eller sjo-configen) på `main` i GitHubs webbgränssnitt.
+2. Lägg till eller ändra objektet i `exceptions` och committa.
+3. GitHub Pages publicerar inom 1–2 minuter.
+
+Alla som startar appen får den nya texten direkt. Appar som redan är öppna hämtar om configen
+var 30:e minut och när appen blir synlig igen efter minst 5 minuter, så även de hinner ikapp
+utan omladdning. Undantaget försvinner av sig självt när `period.end` passerats.
+
+Kontrollera att JSON-filen fortfarande är giltig innan du committar — en trasig config sänker
+hela appen. Se [Vad som kräver versionsbump](#vad-som-kräver-versionsbump).
+
 ## Projektstruktur
 
 ```
@@ -377,6 +392,18 @@ ressel-static/
 
 ## Teknisk information
 
+### Vad som kräver versionsbump
+
+Service workern har två cachestrategier:
+
+| Filer | Strategi | Kräver bump? |
+|-------|----------|--------------|
+| `data/*.json` | Network-first, med `_nocache`-parameter från appen. Cachen används bara offline. | **Nej.** Ändringen når alla vid nästa appstart, och öppna appar hämtar om data i bakgrunden. |
+| `index.html`, `css/`, `js/`, `manifest.json`, ikoner | Cache-first. Bara en ny `APP_VERSION` ger ny cache. | **Ja.** Annars ligger klienter kvar på gammal kod. |
+
+Undantag: en **ny** datafil ska in i `service-worker.js → JSON_FILES` för offline-stöd, vilket
+är en kodändring och därmed en bump.
+
 ### Versionshantering
 
 Uppdatera versionsnumret på dessa fem ställen vid ny release:
@@ -391,7 +418,8 @@ Uppdatera versionsnumret på dessa fem ställen vid ny release:
 
 ### PWA & Service Worker
 
-- Offline-stöd via Service Worker med cache-strategi
+- Offline-stöd via Service Worker: network-first för data, cache-first för kod
+- Data (inkl. trafiknotiser) hämtas om var 30:e minut och när appen blir synlig igen efter minst 5 min
 - Installeras som native app på mobil och desktop
 - Ny cache-nyckel vid versionsökning rensar gamla cachar automatiskt
 - Inbyggd notis när ny version finns tillgänglig
