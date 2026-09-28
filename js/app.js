@@ -6,6 +6,8 @@
  * och hanterar applikationens övergripande livscykel.
  * 
  * Versionshistorik:
+ * 5.8.1 - Configen (och därmed exceptions-notiserna) hämtas om i 30-minutersuppdateringen och när
+ *         appen blir synlig igen efter minst 5 min. Notiser kan nu ändras i JSON utan versionsbump.
  * 5.8.0 - Ljust tema: växlare under Inställningar > Utseende (js/theme.js, html[data-theme]),
  *         valet sparas separat i localStorage och nollställs av Återställ
  * 5.7.2 - Förvarning 28 sep: notis om att Emelie-trafiken ställs in från 29 sep
@@ -37,7 +39,7 @@
  * 1.0.0 - Originalversion baserad på MMM-Resseltrafiken
  * 
  * @author Christian Gillinger
- * @version 5.8.0
+ * @version 5.8.1
  * @license MIT
  */
 
@@ -73,9 +75,10 @@ document.addEventListener('DOMContentLoaded', async function() {
      * @type {Object}
      */
     const config = {
-        version: '5.8.0',                  // Applikationsversion (uppdatera vid varje ny version)
+        version: '5.8.1',                  // Applikationsversion (uppdatera vid varje ny version)
         updateInterval: 60000,             // Uppdateringsintervall i millisekunder (1 minut)
         dataRefreshInterval: 1800000,      // Uppdatera data från server var 30:e minut
+        visibilityRefreshMinAge: 300000,   // Hämta om data när appen blir synlig igen om det gått minst 5 min
         midnightCheckInterval: 60000,      // Kontrollera midnatt var minut
         versionCheckInterval: 3600000,     // Kontrollera versionsuppdateringar varje timme
         showBothDirections: true,          // Visa både utgående och returresor
@@ -708,9 +711,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     /**
      * Laddar konfigurationsfiler för Sjöstadstrafiken och Citylinjen
      * med cache-busting för att säkerställa senaste data
-     * @returns {Promise<Object>} Den laddade konfigurationsdatan
+     * @param {boolean} [silent=false] - Visa inget felmeddelande (bakgrundsuppdatering)
+     * @returns {Promise<Object|null>} Den laddade konfigurationsdatan, eller null vid fel
      */
-    async function loadConfigData() {
+    async function loadConfigData(silent = false) {
         try {
             debugLog('Laddar konfigurationsdata...');
             
@@ -735,7 +739,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             };
         } catch (error) {
             console.error('Fel vid laddning av konfigurationsdata:', error);
-            handleError(error, 'Kunde inte ladda konfigurationsdata');
+            if (!silent) {
+                handleError(error, 'Kunde inte ladda konfigurationsdata');
+            }
             return null;
         }
     }
@@ -2022,7 +2028,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     /**
      * Laddar om alla tidtabeller från server
      */
-    async function loadAllTimetables() {
+    /**
+     * Laddar config (vid behov) samt gårdagens, dagens och morgondagens tidtabeller.
+     * @param {Object} [options]
+     * @param {boolean} [options.refreshConfig=false] - Hämta om configen även om den redan finns.
+     *        Configen innehåller `exceptions` (trafiknotiser), som ska nå öppna appar utan
+     *        omladdning. Misslyckas hämtningen behålls den gamla configen tyst.
+     */
+    async function loadAllTimetables(options = {}) {
         try {
             const now = new Date();
             const tomorrow = new Date(now);
@@ -2030,12 +2043,20 @@ document.addEventListener('DOMContentLoaded', async function() {
             const yesterday = new Date(now);
             yesterday.setDate(yesterday.getDate() - 1);
             
-            // Om konfigurationsdata inte är laddat än, ladda det
-            if (!timetableData.config.sjo || !timetableData.config.city) {
+            const hasConfig = !!(timetableData.config.sjo && timetableData.config.city);
+            if (!hasConfig) {
+                // Första laddningen: configen är obligatorisk
                 timetableData.config = await loadConfigData();
                 if (!timetableData.config) {
                     handleError(null, 'Kunde inte ladda konfigurationsdata');
                     return;
+                }
+            } else if (options.refreshConfig) {
+                // Bakgrundsuppdatering: byt bara om hämtningen lyckas
+                const freshConfig = await loadConfigData(true);
+                if (freshConfig) {
+                    timetableData.config = freshConfig;
+                    debugLog('Konfigurationsdata uppdaterad i bakgrunden');
                 }
             }
             
@@ -2133,9 +2154,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             updateDisplay();
         }, config.updateInterval);
         
-        // Starta ny timer för datahämtning (var 30:e minut)
+        // Starta ny timer för datahämtning (var 30:e minut), inkl. config/notiser
         timers.dataRefresh = setInterval(() => {
-            loadAllTimetables();
+            loadAllTimetables({ refreshConfig: true });
         }, config.dataRefreshInterval);
         
         // Starta ny timer för midnattskontroll (varje minut)
@@ -2174,7 +2195,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Lyssna på online/offline händelser för att hantera nätverksförändringar
             window.addEventListener('online', () => {
                 debugLog('Nätverk tillgängligt igen, uppdaterar data...');
-                loadAllTimetables();
+                loadAllTimetables({ refreshConfig: true });
                 checkForVersionUpdates();
             });
             
@@ -2185,6 +2206,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                     checkForMidnight();
                     updateDisplay(true);
                     checkForVersionUpdates();
+
+                    // Hämta om data (inkl. notiser) om det var ett tag sedan. Det här är
+                    // ögonblicket användaren står vid bryggan och tittar på appen.
+                    const lastUpdate = timetableData.lastUpdate ? timetableData.lastUpdate.getTime() : 0;
+                    if (Date.now() - lastUpdate > config.visibilityRefreshMinAge) {
+                        loadAllTimetables({ refreshConfig: true });
+                    }
                 }
             });
             

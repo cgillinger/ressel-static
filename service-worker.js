@@ -3,6 +3,7 @@
  * Caches application assets for offline functionality
  * 
  * Version History:
+ * 5.8.1 - Versionsbump (config hämtas om i bakgrunden, app.js)
  * 5.8.0 - Ljust tema: js/theme.js i STATIC_FILES_TO_CACHE
  * 5.7.2 - Förvarning 28 sep om Emelie-uppehållet
  * 5.7.1 - Trafikuppehåll M/S Emelie 29-30 sep 2026 (broarbete Danvikskanalen)
@@ -22,7 +23,7 @@
  * 1.0.0 - Original service worker
  */
 
-const APP_VERSION = '5.8.0';
+const APP_VERSION = '5.8.1';
 const CACHE_NAME = `resseltrafiken-v${APP_VERSION}`;
 const JSON_CACHE_NAME = `resseltrafiken-json-v${APP_VERSION}`;
 
