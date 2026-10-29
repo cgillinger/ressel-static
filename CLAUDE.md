@@ -1,3 +1,4 @@
+<!-- md optimerad 2026:10:29 -->
 # Sjöstadsfärjetrafiken (ressel-static)
 
 Statisk PWA med färjetidtabeller för Hammarby Sjöstad. Ingen byggkedja — rå
