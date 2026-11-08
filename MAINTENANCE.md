@@ -3,6 +3,44 @@
 > Praktisk checklista för att lägga in en ny säsong. Skriven 2026-06-14 i samband med Sommar 2026.
 > Läs den här innan du börjar – då går det fort och inget glöms.
 
+## Snabbväg: ny Emelie-säsong via import
+
+Ressels PDF läses in av `tools/import_emelie.py` (Python 3 + `pdftotext` från poppler-utils).
+Inga handskrivna JSON-filer.
+
+```bash
+python3 tools/import_emelie.py https://ressel.se/wp-content/uploads/…/Tidtabell-Emelie-A4-<SÄSONG>.pdf
+# granska sammanfattningen, sedan:
+python3 tools/import_emelie.py <samma PDF> --write
+python3 tools/validate.py && python3 -m unittest
+```
+
+1. **Kör utan `--write`** och granska: period, antal turer per dagtyp, avstigning (`*`),
+   helgregler och vilka filer som skapas eller återanvänds (identiskt innehåll → befintlig fil).
+2. **Läs varningarna.** Turer som avviker från de vanliga restiderna importeras *som PDF:en säger*
+   och flaggas (t.ex. vinter 2026/27: 10:14-turen har Masthamnen 10:32 och Djurgården 10:40, vanligen
+   10:28/10:38 — kolla mot tryckt tabell). Okända noter eller rader ger också varning.
+3. **`--write`** skapar `ressel-city-<säsong>-<dagtyp>.json`, lägger säsongen i `season_mapping`
+   (idempotent, matchar på `period.start`), skriver `source_pdf`, lägger PDF-namnet i
+   `_metadata.data_sources`, sätter `last_updated`, bumpar `_metadata.version` (minor) och kör validatorn.
+4. **Helgregler:** "Ingen trafik …" blir `no_traffic`. "Helgtrafik …" blir `weekend_schedule`, men bara
+   mån–fre; lördag/sönd­ag har redan egna tabeller.
+5. Testa lokalt (`python3 -m http.server 8000`) och simulera `determineTimetableFiles()` på säsongsgränserna.
+
+**Ingen versionsbump behövs** — datafiler förcachas av service workern ur configerna. Inget
+byggsteg.
+
+**Automatik:** `.github/workflows/check-ressel-timetable.yml` kollar ressel.se/emelie-trafiken/
+varje måndag, importerar nya PDF:er och öppnar en PR (gren `auto/emelie-<pdf>`) med sammanfattningen.
+Den mergas aldrig automatiskt — granska varningarna som ovan. `validate-timetables.yml` kör
+validatorn och testerna på PR:er mot `data/**` och `tools/**`.
+
+`tools/validate.py` kontrollerar båda configerna (filer finns, perioder överlappar inte, luckor
+mellan city-säsonger varnar, tider HH:MM och stigande per brygga, lika många tider per brygga,
+`disembark_only` ⊆ `departures`, helgdatum inom perioden). Exit ≠ 0 vid fel.
+
+Den manuella vägen nedan är kvar som fallback (PDF:en går inte att tolka, eller sjo).
+
 ## Två linjer, två system
 
 | Linje | Operatör | Betalning | Config | Mönster |
@@ -45,8 +83,7 @@ Format och exempel i README, avsnitt "Undantag".
 
 **Ingen versionsbump behövs för `notice` och `no_traffic`** — se "Vad som kräver
 versionsbump" nedan. Redigera JSON-filen direkt på `main` (t.ex. i GitHubs webbgränssnitt),
-vänta 1–2 min på Pages-deployen, klart. `replace` med en *ny* datafil kräver att filen läggs i
-`service-worker.js → JSON_FILES` (offline-cache) och därmed en bump.
+vänta 1–2 min på Pages-deployen, klart. Även `replace` med en ny datafil går utan bump.
 
 Det gamla sättet (`maintenance_mode: true` på en säsong + maintenance-filer) stöds fortfarande.
 
@@ -59,9 +96,10 @@ Appen är en PWA med två cachestrategier i `service-worker.js`:
 | `data/*.json` | **Network-first** + `_nocache`-parameter i appen. Cachen används bara offline. | **Nej.** Ändringen når alla vid nästa appstart, och öppna appar hämtar om configen var 30:e minut samt när appen blir synlig igen efter minst 5 min (sedan 5.8.1). |
 | `index.html`, `css/`, `js/`, `manifest.json`, ikoner | **Cache-first.** Bara en ny `APP_VERSION` ger ny cache. | **Ja, alltid.** Annars pinnar gamla cachar klienterna på gammal kod. |
 
-Undantag på dataraden: en **ny** datafil (ny säsong, `replace`) ska in i `JSON_FILES` för
-offline-stöd, vilket är en kodändring → bump. Ren redigering av befintliga JSON-filer
-(nya `exceptions`, ändrade tider, ny säsong som återanvänder filer) → ingen bump.
+Även **nya** datafiler (ny säsong, `replace`) kräver ingen bump: vid installation läser service
+workern båda configerna och förcachar alla filer i `season_mapping[].files` och
+`exceptions[].files` (enskilda fel fäller inte installationen). Det gamla undantaget med
+`JSON_FILES` är borta. Samma gäller ändrade tider och nya `exceptions`.
 
 ### Så bumpar du
 
@@ -75,21 +113,22 @@ Bumpa **samma** versionsnummer på alla dessa ställen (sök på gamla numret):
 | `js/app.js` | `config.version`, JSDoc `@version`, samt en rad i versionshistoriken |
 | `js/init.js` | `window.APP_VERSION` |
 
-Lägg dessutom till nya datafiler i `service-worker.js → JSON_FILES` (annars cachas de inte för offline).
+Datafiler behöver inte läggas in i service workern — de hittas via configerna.
 
 ## Källmaterial
 
 Lägg PDF:er / skärmdumpar i `pdf/`. **Den mappen är gitignore:ad och ska aldrig pushas** – den är bara referens. Skriv in PDF-namnet i datafilens `metadata.note` så att källan går att spåra.
 
-## Checklista – ny säsong
+## Checklista – ny säsong (manuellt, fallback)
+
+> city: kör hellre importen ovan. Checklistan gäller sjo och när PDF:en inte går att tolka.
 
 1. [ ] Lägg käll-PDF/bilder i `pdf/`.
 2. [ ] city: skapa nya datafiler `ressel-city-<säsong>-{weekday,saturday,sunday}.json` om tiderna avviker (annars återanvänd befintlig fil).
 3. [ ] city: lägg till säsong i `season_mapping` (`period`, `files`, ev. `holiday_rules.weekend_schedule` för storhelger).
 4. [ ] sjo: oftast räcker config – kapa den öppna `2099`-perioden, lägg in sommarsäsong, lägg tillbaka ny öppen period. Datafilerna återanvänds normalt.
    [ ] sjo: kontrollera att `holiday_rules.weekend_schedule` täcker nästa kalenderår (röda dagar + aftnar).
-5. [ ] Lägg nya datafiler i `service-worker.js → JSON_FILES`.
-6. [ ] Bumpa versionen på alla **fem** ställena ovan (init.js glömdes i 5.3.0).
+5. [ ] (Bara vid kodändring) bumpa versionen på alla **fem** ställena ovan (init.js glömdes i 5.3.0).
 7. [ ] Uppdatera `_metadata.version` + `last_updated` i berörd config, och fil-listan i README.
 8. [ ] Validera JSON och simulera datumval (se nedan).
 9. [ ] Testa lokalt: `python3 -m http.server 8000`.

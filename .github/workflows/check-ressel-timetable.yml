@@ -1,0 +1,95 @@
+# Kollar veckovis om Ressel publicerat en ny Emelie-tidtabell (PDF). För varje ny PDF
+# körs tools/import_emelie.py --write och en pull request öppnas. Aldrig auto-merge:
+# en människa granskar sammanfattningen (särskilt varningar) innan merge.
+#
+# Kräver att repot tillåter "Actions får skapa pull requests"
+# (Settings > Actions > General > Workflow permissions).
+# PR:er som öppnas med GITHUB_TOKEN triggar inte andra workflows; validering och
+# tester körs därför här i jobbet och redovisas i PR-texten.
+name: Kolla ny Emelie-tidtabell
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # måndagar 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checka ut main
+        uses: actions/checkout@v4.2.2
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Installera poppler-utils
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils
+
+      - name: Hitta och importera nya PDF:er
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -u
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          curl -fsSL -A "ressel-static-check/1.0" https://ressel.se/emelie-trafiken/ -o page.html
+          grep -oE 'https://ressel\.se/wp-content/uploads/[^"'"'"' <>]*Emelie[^"'"'"' <>]*\.pdf' page.html | sort -u > pdfs.txt || true
+          echo "PDF-länkar på sidan:"; cat pdfs.txt
+
+          failed=0
+          while read -r url <&3; do
+            [ -z "$url" ] && continue
+            name=$(basename "$url")
+            # Redan känd? Då står namnet i source_pdf eller _metadata.data_sources.
+            if grep -qF "$name" data/ressel-city-config.json; then
+              echo "== $name: redan importerad"; continue
+            fi
+            slug=$(echo "${name%.pdf}" | tr -c 'A-Za-z0-9\n' '-' | sed 's/-*$//')
+            branch="auto/emelie-$slug"
+            if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+              echo "== $name: grenen $branch finns redan (PR öppen eller väntar)"; continue
+            fi
+
+            echo "== $name: importerar"
+            git checkout -q main && git reset -q --hard origin/main && git clean -fdq data
+            if ! python3 tools/import_emelie.py "$url" --write --skip-past > import.txt 2>&1; then
+              echo "::error::Import av $name misslyckades"; cat import.txt; failed=1; continue
+            fi
+            cat import.txt
+            if [ -z "$(git status --porcelain data)" ]; then
+              echo "== $name: inga dataändringar (passerad period eller redan importerad)"; continue
+            fi
+
+            python3 tools/validate.py > validate.txt 2>&1 || true
+            python3 -m unittest > tests.txt 2>&1 && tests_status="OK" || tests_status="MISSLYCKADES"
+
+            git checkout -q -b "$branch"
+            git add data
+            git commit -q -m "data: importera $name"
+            git push -q origin "$branch"
+
+            {
+              echo "Automatisk import av \`$name\` ($url)."
+              echo
+              echo "**Granska innan merge.** Kontrollera tider mot PDF:en, särskilt avvikande turer och varningar nedan. Mergas aldrig automatiskt."
+              echo
+              echo "### Importens sammanfattning"
+              echo '```'; cat import.txt; echo '```'
+              echo
+              echo "### Validator"
+              echo '```'; cat validate.txt; echo '```'
+              echo
+              echo "### Enhetstester: $tests_status"
+            } > body.md
+
+            gh pr create --base main --head "$branch" \
+              --title "Ny Emelie-tidtabell: $name" --body-file body.md
+          done 3< pdfs.txt
+
+          exit $failed

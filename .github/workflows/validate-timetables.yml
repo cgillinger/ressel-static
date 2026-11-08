@@ -1,0 +1,25 @@
+# Validerar tidtabellsdata och kör importens enhetstester vid ändringar i data/ eller tools/.
+name: Validera tidtabeller
+
+on:
+  pull_request:
+    paths:
+      - 'data/**'
+      - 'tools/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checka ut
+        uses: actions/checkout@v4.2.2
+
+      - name: Validera data
+        run: python3 tools/validate.py
+
+      - name: Enhetstester
+        run: python3 -m unittest
