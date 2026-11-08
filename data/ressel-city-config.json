@@ -1,7 +1,7 @@
 {
   "_metadata": {
-    "version": "13.4.0",
-    "last_updated": "2026-09-28",
+    "version": "13.5.0",
+    "last_updated": "2026-11-08",
     "description": "FÖRENKLAD struktur - generiska filer för vinter/vår/höst, separata för sommar",
     "data_sources": [
       "CITY LINE VINTER 2024/2025 (PDF)",
@@ -9,7 +9,8 @@
       "CITY LINE VÅREN 2026 (PDF)",
       "CITY LINE SOMMAR 2026 (Tidtabell-Emelie-A4-SOMMAR-2026.pdf)",
       "CITY LINE HÖST 2026 (Tidtabell-Emelie-A4-HOST-2026.pdf)",
-      "CITY LINE HÖST 2026 del 2 (Tidtabell-Emelie-A4-HOST2-2026.pdf)"
+      "CITY LINE HÖST 2026 del 2 (Tidtabell-Emelie-A4-HOST2-2026.pdf)",
+      "CITY LINE VINTER 2026/2027 (Tidtabell-Emelie-A4-VINTER-2026.pdf)"
     ],
     "update_cycle": "Generic files reused across similar seasons",
     "validation_rules": [
@@ -216,6 +217,24 @@
         "weekend_schedule": []
       },
       "note": "Senhöst 21 sept - 8 nov 2026 (Tidtabell-Emelie-A4-HOST2-2026.pdf). Vardag identisk med generisk fil (samma 10:32/10:40-tryckfel som i förra PDF:en). Helgerna nedbantade till timmestrafik: söndag = vinterhelgfilen exakt, lördag = egen fil med en extra sen tur. Alla helgons dag (lör 31 okt) står inte omnämnd i PDF:en - ingen regel inlagd. OBS i PDF: trafiken kan ställas in med kort varsel 28 sept - 11 okt pga broarbete vid Danvikstull."
+    },
+    {
+      "name": "Winter 2026-2027",
+      "period": {
+        "start": "2026-11-09",
+        "end": "2027-03-29"
+      },
+      "files": {
+        "weekday": "ressel-city-vinter-2026-2027-weekday.json",
+        "saturday": "ressel-city-vinter-2026-2027-saturday.json",
+        "sunday": "ressel-city-vinter-2026-2027-sunday.json"
+      },
+      "holiday_rules": {
+        "no_traffic": ["2026-12-24", "2026-12-25", "2026-12-26", "2026-12-27", "2026-12-31", "2027-01-01"],
+        "weekend_schedule": ["2027-01-06", "2027-03-25", "2027-03-26", "2027-03-29"]
+      },
+      "source_pdf": "https://ressel.se/wp-content/uploads/2026/10/Tidtabell-Emelie-A4-VINTER-2026.pdf",
+      "note": "9 november 2026 - 29 mars 2027 (Tidtabell-Emelie-A4-VINTER-2026.pdf). Importerad med tools/import_emelie.py. Avvikande tur(er) importerade som i PDF:en."
     }
   ]
 }

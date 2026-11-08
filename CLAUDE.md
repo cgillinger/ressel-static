@@ -11,11 +11,16 @@ HTML/CSS/JS, `data/*.json` är innehållet.
   `timehandler.js`, `createEnhancedTimeObjects()` eller
   `determineTimetableFiles()`.** Nattturer (`00:05`) hör till föregående
   trafikdygn via `config.dayRolloverTime`; appen laddar igår, idag och imorgon.
-- **[MAINTENANCE.md](MAINTENANCE.md)** — checklista för ny säsong. **Kod**
+- **[MAINTENANCE.md](MAINTENANCE.md)** — ny säsong. **city: kör
+  `python3 tools/import_emelie.py <pdf-url> [--write]`** (sedan
+  `tools/validate.py` + `python3 -m unittest`); manuell checklista är fallback
+  (sjo). Veckovis Action öppnar PR vid ny PDF, mergas aldrig automatiskt.
+  Importen flaggar avvikande turer (t.ex. 10:14 vinter 2026/27) men "rättar"
+  dem inte. **Kod**
   (HTML/JS/CSS/manifest) är cache-first: bumpa versionen på **fem** ställen,
   annars pinnar gamla PWA-cachar klienterna. **Data** (`data/*.json`) är
   network-first och kräver ingen bump — en notis i `exceptions` kan redigeras
-  direkt på `main`. Undantag: en *ny* datafil ska in i `JSON_FILES` → bump.
+  direkt på `main`. Nya datafiler förcachas ur configerna — ingen bump.
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** — Pages publicerar från `main`, **inte**
   `gh-pages`. `deploy.yml` matar en gren ingen läser. Lägg aldrig till ett
   byggsteg där utan att först läsa filen.

@@ -38,3 +38,7 @@ data/backup_*
 
 # Source timetables (PDF/bilder) - referensmaterial, ska aldrig pushas
 pdf/
+
+# Python
+__pycache__/
+*.pyc

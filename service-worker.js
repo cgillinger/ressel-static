@@ -3,6 +3,7 @@
  * Caches application assets for offline functionality
  * 
  * Version History:
+ * 5.9.0 - Datafiler förcachas ur configernas season_mapping/exceptions (ingen JSON_FILES-lista); Emelie-import i tools/
  * 5.8.1 - Versionsbump (config hämtas om i bakgrunden, app.js)
  * 5.8.0 - Ljust tema: js/theme.js i STATIC_FILES_TO_CACHE
  * 5.7.2 - Förvarning 28 sep om Emelie-uppehållet
@@ -23,7 +24,7 @@
  * 1.0.0 - Original service worker
  */
 
-const APP_VERSION = '5.8.1';
+const APP_VERSION = '5.9.0';
 const CACHE_NAME = `resseltrafiken-v${APP_VERSION}`;
 const JSON_CACHE_NAME = `resseltrafiken-json-v${APP_VERSION}`;
 
@@ -41,23 +42,56 @@ const STATIC_FILES_TO_CACHE = [
   './manifest.json'
 ];
 
-// JSON-filer som behöver hanteras med "network-first" strategi
-const JSON_FILES = [
+// JSON-filer: de två configerna precachas alltid. Datafilerna läses ur
+// season_mapping[].files och exceptions[].files i respektive config, så en ny
+// säsong kräver aldrig ändring här (och därmed ingen versionsbump).
+const CONFIG_FILES = [
   './data/ressel-sjo-config.json',
-  './data/ressel-city-config.json',
-  './data/ressel-sjo-weekday-standard.json',
-  './data/ressel-sjo-weekday-summer.json',
-  './data/ressel-sjo-weekend.json',
-  './data/ressel-city-weekday-winter.json',
-  './data/ressel-city-weekend-winter.json',
-  './data/ressel-city-spring-saturday.json',
-  './data/ressel-city-spring-sunday.json',
-  './data/ressel-city-summer-weekday.json',
-  './data/ressel-city-summer-saturday.json',
-  './data/ressel-city-summer-sunday.json',
-  './data/ressel-city-autumn-sunday.json',
-  './data/ressel-city-autumn-saturday.json'
+  './data/ressel-city-config.json'
 ];
+
+/**
+ * Hämtar en JSON-fil och lägger den i JSON-cachen. Fel sväljs: en enskild fil som
+ * saknas eller inte går att hämta får inte fälla installationen.
+ * @param {Cache} cache - JSON-cachen
+ * @param {string} path - Relativ sökväg
+ * @returns {Promise<Object|null>} Tolkad JSON, eller null vid fel
+ */
+function precacheJSON(cache, path) {
+  return fetch(path, { cache: 'no-cache' })
+    .then((response) => {
+      if (!response || !response.ok) {
+        throw new Error(`HTTP ${response && response.status}`);
+      }
+      return cache.put(new Request(normalizeURL(new URL(path, self.location.href).href)), response.clone())
+        .then(() => response.json());
+    })
+    .catch((err) => {
+      console.warn('Kunde inte förcacha', path, err);
+      return null;
+    });
+}
+
+/**
+ * Samlar alla datafiler som configerna pekar på (säsonger och undantag, båda linjerna)
+ * @param {Array<Object|null>} configs - Tolkade configer
+ * @returns {string[]} Unika sökvägar relativt service-worker.js
+ */
+function referencedDataFiles(configs) {
+  const names = new Set();
+  configs.forEach((cfg) => {
+    if (!cfg) return;
+    const lists = [cfg.season_mapping, cfg.exceptions];
+    lists.forEach((list) => {
+      (Array.isArray(list) ? list : []).forEach((entry) => {
+        Object.values((entry && entry.files) || {}).forEach((name) => {
+          if (typeof name === 'string' && name) names.add(`./data/${name}`);
+        });
+      });
+    });
+  });
+  return Array.from(names);
+}
 
 /**
  * SÄKERHETSHÄRDNING: Normaliserar URL för cache
@@ -129,11 +163,14 @@ self.addEventListener('install', (event) => {
         return cache.addAll(STATIC_FILES_TO_CACHE);
       })
       .then(() => {
-        // Pre-cache JSON files as fallback
+        // Pre-cache JSON: configerna först, sedan alla filer de refererar
         return caches.open(JSON_CACHE_NAME)
           .then((jsonCache) => {
             console.log('Pre-caching JSON files for offline use');
-            return jsonCache.addAll(JSON_FILES);
+            return Promise.all(CONFIG_FILES.map((path) => precacheJSON(jsonCache, path)))
+              .then((configs) => Promise.all(
+                referencedDataFiles(configs).map((path) => precacheJSON(jsonCache, path))
+              ));
           });
       })
       .then(() => {

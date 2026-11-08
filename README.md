@@ -6,7 +6,7 @@
 
 **Realtidstidtabell för Sjöstadstrafiken och M/S Emelie i Hammarby Sjöstad, Stockholm**
 
-[![Version](https://img.shields.io/badge/version-5.8.1-blue?style=flat-square)](https://github.com/cgillinger/ressel-static/releases)
+[![Version](https://img.shields.io/badge/version-5.9.0-blue?style=flat-square)](https://github.com/cgillinger/ressel-static/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![PWA](https://img.shields.io/badge/PWA-ready-5A0FC8?style=flat-square&logo=pwa&logoColor=white)](https://cgillinger.github.io/ressel-static/)
 [![GitHub Pages](https://img.shields.io/badge/hosted-GitHub%20Pages-222?style=flat-square&logo=github)](https://cgillinger.github.io/ressel-static/)
@@ -371,6 +371,18 @@ utan omladdning. Undantaget försvinner av sig självt när `period.end` passera
 Kontrollera att JSON-filen fortfarande är giltig innan du committar — en trasig config sänker
 hela appen. Se [Vad som kräver versionsbump](#vad-som-kräver-versionsbump).
 
+## Ny Emelie-säsong
+
+```bash
+python3 tools/import_emelie.py <pdf-sökväg|url>           # sammanfattning, skriver inget
+python3 tools/import_emelie.py <pdf-sökväg|url> --write   # skapar datafiler + säsong, kör validatorn
+python3 tools/validate.py && python3 -m unittest
+```
+
+Kräver Python 3 och `pdftotext` (poppler-utils). En veckovis GitHub Action
+(`check-ressel-timetable.yml`) öppnar en PR när Ressel publicerar ny PDF. Se
+[MAINTENANCE.md](MAINTENANCE.md).
+
 ## Projektstruktur
 
 ```
@@ -386,6 +398,10 @@ ressel-static/
 │   └── renderer.js         UI-rendering
 ├── data/
 │   └── *.json              Tidtabeller och konfiguration
+├── tools/
+│   ├── import_emelie.py    Importerar Emelie-PDF till data/ (se MAINTENANCE.md)
+│   ├── validate.py         Validerar configer och datafiler
+│   └── tests/              Enhetstester (python3 -m unittest)
 └── icons/
     └── boat.png            App-ikon
 ```
@@ -401,8 +417,8 @@ Service workern har två cachestrategier:
 | `data/*.json` | Network-first, med `_nocache`-parameter från appen. Cachen används bara offline. | **Nej.** Ändringen når alla vid nästa appstart, och öppna appar hämtar om data i bakgrunden. |
 | `index.html`, `css/`, `js/`, `manifest.json`, ikoner | Cache-first. Bara en ny `APP_VERSION` ger ny cache. | **Ja.** Annars ligger klienter kvar på gammal kod. |
 
-Undantag: en **ny** datafil ska in i `service-worker.js → JSON_FILES` för offline-stöd, vilket
-är en kodändring och därmed en bump.
+Inte heller en **ny** datafil kräver bump: service workern förcachar alla filer som configernas
+`season_mapping` och `exceptions` pekar på.
 
 ### Versionshantering
 
