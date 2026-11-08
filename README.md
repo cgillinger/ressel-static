@@ -371,17 +371,20 @@ utan omladdning. Undantaget försvinner av sig självt när `period.end` passera
 Kontrollera att JSON-filen fortfarande är giltig innan du committar — en trasig config sänker
 hela appen. Se [Vad som kräver versionsbump](#vad-som-kräver-versionsbump).
 
-## Ny Emelie-säsong
+## Synk mot Ressel (båda linjerna)
+
+Ressels webbtabeller är primär källa. En veckovis GitHub Action
+(`check-ressel-timetable.yml`) kör `tools/sync_ressel.py` och öppnar en PR vid nya perioder
+eller ändrade tider (mergas aldrig automatiskt). Manuellt:
 
 ```bash
-python3 tools/import_emelie.py <pdf-sökväg|url>           # sammanfattning, skriver inget
-python3 tools/import_emelie.py <pdf-sökväg|url> --write   # skapar datafiler + säsong, kör validatorn
+python3 tools/sync_ressel.py           # sammanfattning, skriver inget
+python3 tools/sync_ressel.py --write   # skriver ändringarna och kör validatorn
 python3 tools/validate.py && python3 -m unittest
 ```
 
-Kräver Python 3 och `pdftotext` (poppler-utils). En veckovis GitHub Action
-(`check-ressel-timetable.yml`) öppnar en PR när Ressel publicerar ny PDF. Se
-[MAINTENANCE.md](MAINTENANCE.md).
+Kräver Python 3 och `pdftotext` (poppler-utils) för Emelies röda dagar. `tools/import_emelie.py <pdf>`
+finns kvar för enbart PDF. Se [MAINTENANCE.md](MAINTENANCE.md).
 
 ## Projektstruktur
 
@@ -399,7 +402,9 @@ ressel-static/
 ├── data/
 │   └── *.json              Tidtabeller och konfiguration
 ├── tools/
-│   ├── import_emelie.py    Importerar Emelie-PDF till data/ (se MAINTENANCE.md)
+│   ├── sync_ressel.py      Synkar data/ mot Ressels webbtabeller (se MAINTENANCE.md)
+│   ├── ressel_web.py       Tolkar webbtabellerna (används av sync_ressel.py)
+│   ├── import_emelie.py    Importerar enbart Emelie-PDF till data/
 │   ├── validate.py         Validerar configer och datafiler
 │   └── tests/              Enhetstester (python3 -m unittest)
 └── icons/
