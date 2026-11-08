@@ -471,8 +471,20 @@ def array_object_spans(text, arr_open):
     return spans, arr_close
 
 
-def update_config_text(text, season, source_entry, today):
-    """Returnerar (ny text, ändrad?, notering)."""
+def bump_version(text, today):
+    """Minor-bump av _metadata.version + last_updated. Returnerar (text, notering)."""
+    m = re.search(r'("_metadata"\s*:\s*\{\s*"version"\s*:\s*")(\d+)\.(\d+)\.(\d+)(")', text)
+    if not m:
+        raise ImportError_("hittar inte _metadata.version")
+    new_v = f"{m.group(2)}.{int(m.group(3)) + 1}.0"
+    text = text[:m.start()] + m.group(1) + new_v + m.group(5) + text[m.end():]
+    text = re.sub(r'("last_updated"\s*:\s*")[^"]*(")', lambda mm: mm.group(1) + today + mm.group(2), text, count=1)
+    return text, f"_metadata.version {m.group(2)}.{m.group(3)}.{m.group(4)} -> {new_v}"
+
+
+def update_config_text(text, season, source_entry, today, bump=True):
+    """Returnerar (ny text, ändrad?, notering). bump=False hoppar över versionsbumpen
+    (anroparen bumpar en gång efter flera ändringar)."""
     orig = text
     notes = []
     # 1. säsongen
@@ -504,15 +516,10 @@ def update_config_text(text, season, source_entry, today):
         text = text[:last + 1] + ",\n      " + json.dumps(source_entry[0], ensure_ascii=False) + text[last + 1:]
         notes.append("källa tillagd i _metadata.data_sources")
     changed = text != orig
-    if changed:
+    if changed and bump:
         # 3. version (minor) + last_updated
-        m = re.search(r'("_metadata"\s*:\s*\{\s*"version"\s*:\s*")(\d+)\.(\d+)\.(\d+)(")', text)
-        if not m:
-            raise ImportError_("hittar inte _metadata.version")
-        new_v = f"{m.group(2)}.{int(m.group(3)) + 1}.0"
-        text = text[:m.start()] + m.group(1) + new_v + m.group(5) + text[m.end():]
-        text = re.sub(r'("last_updated"\s*:\s*")[^"]*(")', lambda mm: mm.group(1) + today + mm.group(2), text, count=1)
-        notes.append(f"_metadata.version {m.group(2)}.{m.group(3)}.{m.group(4)} -> {new_v}")
+        text, note = bump_version(text, today)
+        notes.append(note)
     json.loads(text)  # måste fortfarande vara giltig JSON
     return text, changed, notes
 
@@ -521,6 +528,42 @@ def update_config_text(text, season, source_entry, today):
 
 def fmt_sv(d):
     return f"{d.day} {MONTH_NAMES[d.month - 1]} {d.year}"
+
+
+def plan_files(days, data_dir, slug, title, start, end, source_name, stop_sequence, own_prefix=None):
+    """Planerar datafiler för en ny säsong: återanvänd identisk fil, dela inom säsongen eller skapa.
+
+    Returnerar ({dagtyp: (filnamn, status, data|None)}, [utskriftsrader]).
+    own_prefix: filer med detta prefix räknas inte som återanvändbara (idempotens vid omkörning).
+    """
+    files_plan, lines, pending = {}, [], {}
+    own_prefix = f"ressel-city-{slug}-" if own_prefix is None else own_prefix
+    for day in DAY_TYPES:
+        norm = normalized(days[day])
+        key = json.dumps(norm, sort_keys=True)
+        reuse = find_reusable(norm, data_dir, day, own_prefix)
+        if reuse:
+            files_plan[day] = (reuse, "återanvänds", None)
+            lines.append(f"  {day:9} återanvänder {reuse}")
+        elif key in pending:
+            files_plan[day] = (pending[key], "delad", None)
+            lines.append(f"  {day:9} delar {pending[key]}")
+        else:
+            fn = f"ressel-city-{slug}-{day}.json"
+            n_tours = len(days[day]["to_city"]["departures"][stop_sequence["to_city"][0]])
+            exists = os.path.exists(os.path.join(data_dir, fn))
+            data = {
+                "metadata": {
+                    "description": f"M/S Emelie {DAY_SV[day]} {title.lower()}",
+                    "day_type": day,
+                    "note": f"{fmt_sv(start)} - {fmt_sv(end)}. {n_tours} avgångar mot city. Källa: {source_name}",
+                },
+                **days[day],
+            }
+            files_plan[day] = (fn, "uppdateras" if exists else "skapas", data)
+            pending[key] = fn
+            lines.append(f"  {day:9} {'uppdaterar' if exists else 'skapar'} {fn}")
+    return files_plan, lines
 
 
 def run(pdf_text, source_name, source_ref, data_dir, write, today=None, skip_past=False):
@@ -596,31 +639,9 @@ def run(pdf_text, source_name, source_ref, data_dir, write, today=None, skip_pas
     # Datafiler
     P("")
     P("Datafiler:")
-    for day in DAY_TYPES:
-        norm = normalized(days[day])
-        key = json.dumps(norm, sort_keys=True)
-        reuse = find_reusable(norm, data_dir, day, f"ressel-city-{slug}-")
-        if reuse:
-            files_plan[day] = (reuse, "återanvänds", None)
-            P(f"  {day:9} återanvänder {reuse}")
-        elif key in pending:
-            files_plan[day] = (pending[key], "delad", None)
-            P(f"  {day:9} delar {pending[key]}")
-        else:
-            fn = f"ressel-city-{slug}-{day}.json"
-            n_tours = len(days[day]["to_city"]["departures"][stop_sequence["to_city"][0]])
-            exists = os.path.exists(os.path.join(data_dir, fn))
-            data = {
-                "metadata": {
-                    "description": f"M/S Emelie {DAY_SV[day]} {title.lower()}",
-                    "day_type": day,
-                    "note": f"{fmt_sv(start)} - {fmt_sv(end)}. {n_tours} avgångar mot city. Källa: {source_name}",
-                },
-                **days[day],
-            }
-            files_plan[day] = (fn, "uppdateras" if exists else "skapas", data)
-            pending[key] = fn
-            P(f"  {day:9} {'uppdaterar' if exists else 'skapar'} {fn}")
+    files_plan, plines = plan_files(days, data_dir, slug, title, start, end, source_name, stop_sequence)
+    for ln in plines:
+        P(ln)
 
     P("")
     P("holiday_rules:")

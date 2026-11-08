@@ -11,12 +11,12 @@ HTML/CSS/JS, `data/*.json` är innehållet.
   `timehandler.js`, `createEnhancedTimeObjects()` eller
   `determineTimetableFiles()`.** Nattturer (`00:05`) hör till föregående
   trafikdygn via `config.dayRolloverTime`; appen laddar igår, idag och imorgon.
-- **[MAINTENANCE.md](MAINTENANCE.md)** — ny säsong. **city: kör
-  `python3 tools/import_emelie.py <pdf-url> [--write]`** (sedan
-  `tools/validate.py` + `python3 -m unittest`); manuell checklista är fallback
-  (sjo). Veckovis Action öppnar PR vid ny PDF, mergas aldrig automatiskt.
-  Importen flaggar avvikande turer (t.ex. 10:14 vinter 2026/27) men "rättar"
-  dem inte. **Kod**
+- **[MAINTENANCE.md](MAINTENANCE.md)** — ny säsong. **Data synkas mot Ressels
+  webbtabeller med `python3 tools/sync_ressel.py [--write]`** (båda linjerna;
+  sedan `tools/validate.py` + `python3 -m unittest`). Veckovis Action öppnar PR
+  (`auto/ressel-sync-<datum>`), mergas aldrig automatiskt. Webben vinner över
+  PDF:en; PDF:en ger Emelies röda dagar. `import_emelie.py` = enbart PDF.
+  Avvikande turer (10:14 vinter 2026/27) flaggas men "rättas" inte. **Kod**
   (HTML/JS/CSS/manifest) är cache-first: bumpa versionen på **fem** ställen,
   annars pinnar gamla PWA-cachar klienterna. **Data** (`data/*.json`) är
   network-first och kräver ingen bump — en notis i `exceptions` kan redigeras

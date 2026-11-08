@@ -3,7 +3,45 @@
 > Praktisk checklista för att lägga in en ny säsong. Skriven 2026-06-14 i samband med Sommar 2026.
 > Läs den här innan du börjar – då går det fort och inget glöms.
 
-## Snabbväg: ny Emelie-säsong via import
+## Snabbväg: synk mot Ressels webbtabeller (båda linjerna)
+
+Ressels webbtabeller (`ressel.se/emelie-trafiken/`, `ressel.se/sjostadstrafiken/`) är primär källa.
+`tools/sync_ressel.py` (Python 3, stdlib; `pdftotext` för Emelies PDF) upptäcker nya perioder
+**och** tysta ändringar i befintliga tider.
+
+**Flöde:** Action körs måndagar -> öppnar PR `auto/ressel-sync-<datum>` om `data/` ändrats
+(finns redan en öppen sådan PR skapas ingen ny) -> du granskar sammanfattningen -> merge.
+Aldrig auto-merge. Manuellt lokalt:
+
+```bash
+python3 tools/sync_ressel.py            # sammanfattning, skriver inget
+python3 tools/sync_ressel.py --write    # skriver och kör validatorn
+python3 tools/validate.py && python3 -m unittest
+```
+
+Flaggor: `--emelie-html F`, `--sjo-html F`, `--pdf URL|F` (kan upprepas), `--no-pdf`.
+Exit 0 även när ändringar finns, exit 1 vid tolkningsfel (t.ex. ogiltig tid som "12:80" i en
+tabell som inte passerat; passerade perioder hoppas över). Idempotent.
+
+- **city:** per period: samma period som en säsong -> tider jämförs mot filerna; skiljer de
+  skrivs filen om, men en fil som delas med andra säsonger ändras aldrig (ny fil skapas).
+  Ny period -> ny säsong (identiska filer återanvänds). Röda dagar finns bara i PDF:en och
+  hämtas ur den PDF som har samma period. Saknas PDF skapas säsongen **utan helgregler** och
+  en VARNING visas: lägg in dem (`tools/import_emelie.py <pdf> --write` när PDF:en kommit). Varje
+  skillnad PDF mot webb är en VARNING (webben vinner). Avvikande turer (10:14) flaggas.
+- **sjo:** den öppna sista säsongen (2099) behålls. Matchar webbtiderna filerna görs inget.
+  Ny/ändrad period kapar öppna säsongen, lägger in den nya och **återöppnar** efter den med
+  föregående säsongs filer. Det är ett **antagande**, och varnas för i sammanfattningen.
+  Filer som delas med säsonger utanför perioden ändras aldrig (ny fil). Dubblettrader hos Ressel
+  (`22:` två gånger) dedupliceras.
+- **Röda dagar sjo:** synken lägger till svenska röda dagar (nyårsdagen, trettondedagen,
+  långfredag, påskdagen, annandag påsk, 1 maj, Kristi himmelsfärd, nationaldagen,
+  midsommardagen, alla helgons dag, juldagen, annandag jul) för innevarande + nästa år,
+  från och med idag, i `holiday_rules.weekend_schedule`. Tar aldrig bort något. **Aftnarna**
+  (jul-, nyårs-, midsommarafton) läggs inte till automatiskt; de är obekräftade tills Ressel
+  publicerat dem, lägg in dem manuellt.
+
+## Snabbväg: enbart Emelie-PDF (import_emelie.py)
 
 Ressels PDF läses in av `tools/import_emelie.py` (Python 3 + `pdftotext` från poppler-utils).
 Inga handskrivna JSON-filer.
@@ -30,16 +68,15 @@ python3 tools/validate.py && python3 -m unittest
 **Ingen versionsbump behövs** — datafiler förcachas av service workern ur configerna. Inget
 byggsteg.
 
-**Automatik:** `.github/workflows/check-ressel-timetable.yml` kollar ressel.se/emelie-trafiken/
-varje måndag, importerar nya PDF:er och öppnar en PR (gren `auto/emelie-<pdf>`) med sammanfattningen.
-Den mergas aldrig automatiskt — granska varningarna som ovan. `validate-timetables.yml` kör
-validatorn och testerna på PR:er mot `data/**` och `tools/**`.
+**Automatik:** `.github/workflows/check-ressel-timetable.yml` kör `sync_ressel.py` varje måndag
+(se ovan) och öppnar en PR. Den mergas aldrig automatiskt — granska varningarna.
+`validate-timetables.yml` kör validatorn och testerna på PR:er mot `data/**` och `tools/**`.
 
 `tools/validate.py` kontrollerar båda configerna (filer finns, perioder överlappar inte, luckor
 mellan city-säsonger varnar, tider HH:MM och stigande per brygga, lika många tider per brygga,
 `disembark_only` ⊆ `departures`, helgdatum inom perioden). Exit ≠ 0 vid fel.
 
-Den manuella vägen nedan är kvar som fallback (PDF:en går inte att tolka, eller sjo).
+Den manuella vägen nedan är kvar som fallback (webb och PDF går inte att tolka).
 
 ## Två linjer, två system
 
@@ -121,7 +158,7 @@ Lägg PDF:er / skärmdumpar i `pdf/`. **Den mappen är gitignore:ad och ska aldr
 
 ## Checklista – ny säsong (manuellt, fallback)
 
-> city: kör hellre importen ovan. Checklistan gäller sjo och när PDF:en inte går att tolka.
+> Kör hellre `sync_ressel.py` ovan. Checklistan gäller när webbsidorna inte går att tolka.
 
 1. [ ] Lägg käll-PDF/bilder i `pdf/`.
 2. [ ] city: skapa nya datafiler `ressel-city-<säsong>-{weekday,saturday,sunday}.json` om tiderna avviker (annars återanvänd befintlig fil).
@@ -150,6 +187,6 @@ genom att spegla logiken i `determineTimetableFiles()` – kontrollera särskilt
 > rättade i v5.4.0, med regressionstest. Kör det när du ändrar säsonger med andra
 > nattturer än idag.
 
-- **sjo-helgdagar är en manuell lista** (`holiday_rules.weekend_schedule` på rotnivå i
-  sjo-configen, ifylld t.o.m. 2027). Glöms påfyllningen visar Sjöstadstrafiken vardagstider
+- **sjo-helgdagar är en lista** (`holiday_rules.weekend_schedule` på rotnivå i
+  sjo-configen). `sync_ressel.py` fyller på röda dagar, aftnarna är manuella. Glöms påfyllningen visar Sjöstadstrafiken vardagstider
   på röda dagar igen — utan varning.
