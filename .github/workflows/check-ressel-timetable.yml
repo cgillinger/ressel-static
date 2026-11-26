@@ -2,7 +2,8 @@
 # varje vecka med tools/sync_ressel.py. Nya perioder och tysta ändringar i befintliga tider
 # ger en pull request (gren auto/ressel-sync-<datum>). Aldrig auto-merge: en människa
 # granskar sammanfattningen (särskilt varningar) innan merge. Finns redan en öppen PR med
-# prefixet auto/ressel-sync- skapas ingen ny (undviker PR-spam), körningen loggar bara.
+# prefixet auto/ressel-sync- skrivs dess gren om (force-push från main) och PR-texten
+# uppdateras, så att den alltid speglar senaste synken. Ingen PR-spam, inget går förlorat.
 #
 # Kräver att repot tillåter "Actions får skapa pull requests"
 # (Settings > Actions > General > Workflow permissions).
@@ -51,28 +52,23 @@ jobs:
             exit $sync_status
           fi
 
-          open=$(gh pr list --state open --json headRefName --jq '.[].headRefName' | grep '^auto/ressel-sync-' || true)
+          open=$(gh pr list --state open --json headRefName --jq '.[].headRefName' | grep '^auto/ressel-sync-' | head -n1 || true)
           if [ -n "$open" ]; then
-            echo "Det finns redan en öppen synk-PR ($open); skapar ingen ny. Ändringarna ligger kvar i arbetskopian och förloras."
-            exit $sync_status
-          fi
-
-          branch="auto/ressel-sync-$(date -u +%F)"
-          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
-            echo "Grenen $branch finns redan; skapar ingen ny PR."
-            exit $sync_status
+            branch="$open"
+          else
+            branch="auto/ressel-sync-$(date -u +%F)"
           fi
 
           python3 tools/validate.py > validate.txt 2>&1 || true
           python3 -m unittest > tests.txt 2>&1 && tests_status="OK" || tests_status="MISSLYCKADES"
 
-          git checkout -q -b "$branch"
+          git checkout -q -B "$branch"
           git add data
-          git commit -q -m "data: synka mot Ressels webbtabeller"
-          git push -q origin "$branch"
+          git commit -q -m "data: synka mot Ressels webbtabeller ($(date -u +%F))"
+          git push -q --force origin "$branch"
 
           {
-            echo "Automatisk synk mot ressel.se (\`tools/sync_ressel.py\`)."
+            echo "Automatisk synk mot ressel.se (\`tools/sync_ressel.py\`), senast $(date -u +%F)."
             echo
             echo "**Granska innan merge.** Kontrollera ändrade tider och varningar nedan mot ressel.se och PDF:erna. Mergas aldrig automatiskt."
             echo
@@ -83,8 +79,13 @@ jobs:
             echo '```'; cat validate.txt; echo '```'
             echo
             echo "### Enhetstester: $tests_status"
+            if [ "$tests_status" != "OK" ]; then echo; echo '```'; tail -n 40 tests.txt; echo '```'; fi
           } > body.md
 
+          if [ -n "$open" ]; then
+            gh pr edit "$branch" --title "Ressel-synk $(date -u +%F)" --body-file body.md
+            exit $sync_status
+          fi
           gh pr create --base main --head "$branch" \
             --title "Ressel-synk $(date -u +%F)" --body-file body.md
           exit $sync_status
