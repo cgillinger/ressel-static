@@ -14,6 +14,7 @@ from datetime import date
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOOLS = os.path.normpath(os.path.join(HERE, ".."))
 ROOT = os.path.normpath(os.path.join(TOOLS, ".."))
+DATA_FIX = os.path.join(HERE, "fixtures", "data")   # fryst kopia av data/ 2026-11-08; testerna ska inte bero på dagens tidtabell
 sys.path.insert(0, TOOLS)
 
 import import_emelie as imp  # noqa: E402
@@ -51,7 +52,7 @@ class ParseTest(unittest.TestCase):
     def setUpClass(cls):
         with open(FIXTURE, encoding="utf-8") as f:
             cls.text = f.read()
-        with open(os.path.join(ROOT, "data", imp.CONFIG_NAME), encoding="utf-8") as f:
+        with open(os.path.join(DATA_FIX, imp.CONFIG_NAME), encoding="utf-8") as f:
             cls.stops = json.load(f)["service_configuration"]["stop_sequence"]
         cls.warnings = []
         cls.tables, cls.sect = imp.parse_tables(cls.text, cls.stops, cls.warnings)
@@ -145,7 +146,7 @@ class WriteTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="emelie-test-")
         self.data = os.path.join(self.tmp, "data")
-        shutil.copytree(os.path.join(ROOT, "data"), self.data)
+        shutil.copytree(os.path.join(DATA_FIX), self.data)
         # ta bort vintersäsongen om den redan är importerad, så testet börjar från före-läget
         for fn in os.listdir(self.data):
             if fn.startswith("ressel-city-vinter-2026-2027-"):

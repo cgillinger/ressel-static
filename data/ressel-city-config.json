@@ -1,7 +1,7 @@
 {
   "_metadata": {
-    "version": "13.5.0",
-    "last_updated": "2026-11-08",
+    "version": "13.6.0",
+    "last_updated": "2026-11-26",
     "description": "FÖRENKLAD struktur - generiska filer för vinter/vår/höst, separata för sommar",
     "data_sources": [
       "CITY LINE VINTER 2024/2025 (PDF)",
@@ -10,7 +10,8 @@
       "CITY LINE SOMMAR 2026 (Tidtabell-Emelie-A4-SOMMAR-2026.pdf)",
       "CITY LINE HÖST 2026 (Tidtabell-Emelie-A4-HOST-2026.pdf)",
       "CITY LINE HÖST 2026 del 2 (Tidtabell-Emelie-A4-HOST2-2026.pdf)",
-      "CITY LINE VINTER 2026/2027 (Tidtabell-Emelie-A4-VINTER-2026.pdf)"
+      "CITY LINE VINTER 2026/2027 (Tidtabell-Emelie-A4-VINTER-2026.pdf)",
+      "ressel.se/emelie-trafiken (webbtabell)"
     ],
     "update_cycle": "Generic files reused across similar seasons",
     "validation_rules": [
