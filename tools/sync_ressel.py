@@ -203,6 +203,8 @@ def sync_city(periods, pdfs, data_dir, today, parse_errors):
             used_pdfs.add((start, end))
         days = {d: imp.build_day(p["days"][d], stops) for d in imp.DAY_TYPES}
         L.append(f"Period {start} till {end}" + (f" (PDF: {pdf['name']})" if pdf else " (ingen matchande PDF)"))
+        for n in p.get("notes", []):
+            W.append(f"Emelie: {n}")
 
         pdf_diffs = []
         if pdf and pdf["tables"] is not None:

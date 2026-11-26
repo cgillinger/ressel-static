@@ -10,7 +10,8 @@ Ressels webbtabeller (`ressel.se/emelie-trafiken/`, `ressel.se/sjostadstrafiken/
 **och** tysta ändringar i befintliga tider.
 
 **Flöde:** Action körs måndagar -> öppnar PR `auto/ressel-sync-<datum>` om `data/` ändrats
-(finns redan en öppen sådan PR skapas ingen ny) -> du granskar sammanfattningen -> merge.
+(finns redan en öppen sådan PR skrivs dess gren om från `main` och PR-texten uppdateras, så den
+visar alltid senaste synken) -> du granskar sammanfattningen -> merge.
 Aldrig auto-merge. Manuellt lokalt:
 
 ```bash
@@ -23,6 +24,10 @@ Flaggor: `--emelie-html F`, `--sjo-html F`, `--pdf URL|F` (kan upprepas), `--no-
 Exit 0 även när ändringar finns, exit 1 vid tolkningsfel (t.ex. ogiltig tid som "12:80" i en
 tabell som inte passerat; passerade perioder hoppas över). Idempotent.
 
+- **city, delperioder:** Ressel kan byta bara några tabeller och datera dem om (2026-11-23:
+  vardagar "16 november", helger kvar på "9 november", samma slutdatum). Delperioder med samma
+  slut som tillsammans täcker alla sex tabeller utan överlapp slås ihop till en period med det
+  tidigaste startdatumet, och en VARNING anger den senare starten. Överlappar de -> fel som förut.
 - **city:** per period: samma period som en säsong -> tider jämförs mot filerna; skiljer de
   skrivs filen om, men en fil som delas med andra säsonger ändras aldrig (ny fil skapas).
   Ny period -> ny säsong (identiska filer återanvänds). Röda dagar finns bara i PDF:en och
@@ -70,6 +75,8 @@ byggsteg.
 
 **Automatik:** `.github/workflows/check-ressel-timetable.yml` kör `sync_ressel.py` varje måndag
 (se ovan) och öppnar en PR. Den mergas aldrig automatiskt — granska varningarna.
+Testerna läser en fryst kopia av data i `tools/tests/fixtures/data/` (2026-11-08), inte
+`data/`; annars fallerar de så fort en synk ändrar tidtabellen.
 `validate-timetables.yml` kör validatorn och testerna på PR:er mot `data/**` och `tools/**`.
 
 `tools/validate.py` kontrollerar båda configerna (filer finns, perioder överlappar inte, luckor

@@ -17,6 +17,7 @@ from datetime import date
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOOLS = os.path.normpath(os.path.join(HERE, ".."))
 ROOT = os.path.normpath(os.path.join(TOOLS, ".."))
+DATA_FIX = os.path.join(HERE, "fixtures", "data")   # fryst kopia av data/ 2026-11-08; testerna ska inte bero på dagens tidtabell
 sys.path.insert(0, TOOLS)
 
 import import_emelie as imp  # noqa: E402
@@ -110,7 +111,7 @@ class DataCase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="sync-test-")
         self.data = os.path.join(self.tmp, "data")
-        shutil.copytree(os.path.join(ROOT, "data"), self.data)
+        shutil.copytree(os.path.join(DATA_FIX), self.data)
 
     def tearDown(self):
         shutil.rmtree(self.tmp)
@@ -175,7 +176,7 @@ class AcceptanceTest(DataCase):
         self.assertTrue(changed)   # Påskdagen 2027-03-28 saknades
         self.assertIn("2027-03-28 Påskdagen", out)
         sj = self.cfg(sync.SJO_CONFIG)
-        old = jload(os.path.join(ROOT, "data", sync.SJO_CONFIG))
+        old = jload(os.path.join(DATA_FIX, sync.SJO_CONFIG))
         added = set(sj["holiday_rules"]["weekend_schedule"]) - set(old["holiday_rules"]["weekend_schedule"])
         self.assertEqual(added, {"2027-03-28"})
         self.assertTrue(set(old["holiday_rules"]["weekend_schedule"]) <= set(sj["holiday_rules"]["weekend_schedule"]))
@@ -360,6 +361,45 @@ class ParseErrorTest(DataCase):
             web.parse_sjo(bad, sj)
 
 
+class PartialPeriodTest(DataCase):
+    """ressel.se 2026-11-23: vardagstabellerna bytta och daterade 16 nov, helgerna kvar på 9 nov."""
+
+    NEW = rd(os.path.join(FIX, "ressel-emelie-trafiken-2026-11-26.html"))
+    DAY = date(2026, 11, 26)
+
+    def stops(self):
+        return self.cfg(imp.CONFIG_NAME)["service_configuration"]["stop_sequence"]
+
+    def test_partial_periods_are_merged(self):
+        (per,) = web.parse_emelie(self.NEW, self.stops(), self.DAY)
+        self.assertEqual((per["start"], per["end"]), (date(2026, 11, 9), date(2027, 3, 29)))
+        self.assertEqual(len(per["notes"]), 1)
+        self.assertIn("weekday anges på webben från 2026-11-16", per["notes"][0])
+
+    def test_sync_updates_weekday_only(self):
+        out, code, changed = self.sync(emelie=self.NEW, pdfs=[], today=self.DAY, write=True)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(changed)
+        self.assertIn("weekday (ressel-city-vinter-2026-2027-weekday.json): ÄNDRADE TIDER", out)
+        self.assertIn("+15:44", out)
+        self.assertNotIn("saturday (", out)
+        self.assertNotIn("sunday (", out)
+        self.assertIn("slås ihop till perioden 2026-11-09–2027-03-29", out)
+        d = self.cfg("ressel-city-vinter-2026-2027-weekday.json")
+        self.assertIn("15:44", d["to_city"]["departures"]["Barnängsbryggan"])
+        self.assertNotIn("15:14", d["to_city"]["departures"]["Barnängsbryggan"])
+
+    def test_overlapping_partial_periods_stay_errors(self):
+        # Vardag/till city finns i båda delperioderna: ingen gissning, fel som förut
+        (snip,) = table_snippets(self.NEW, [1])
+        dup = snip.replace("tablepress-1", "tablepress-99").replace("16 november", "9 november")
+        bad = self.NEW.replace("</body>", dup + "</body>")
+        errs = []
+        self.assertEqual(web.parse_emelie(bad, self.stops(), self.DAY, errs), [])
+        self.assertEqual(len(errs), 2)
+        self.assertTrue(all("saknas" in e for e in errs))
+
+
 class HolidayTest(unittest.TestCase):
     def test_2027(self):
         h = sync.swedish_holidays(2027)
@@ -384,7 +424,7 @@ class HolidayTest(unittest.TestCase):
         tmp = tempfile.mkdtemp(prefix="sync-test-")
         try:
             data = os.path.join(tmp, "data")
-            shutil.copytree(os.path.join(ROOT, "data"), data)
+            shutil.copytree(os.path.join(DATA_FIX), data)
             out, code, changed = sync.run(EMELIE, SJO, PDF, data, True, date(2027, 1, 10))
             self.assertTrue(changed, out)
             sched = jload(os.path.join(data, sync.SJO_CONFIG))["holiday_rules"]["weekend_schedule"]

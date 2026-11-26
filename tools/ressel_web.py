@@ -252,6 +252,7 @@ def parse_emelie(html, stop_sequence, today=None, errors=None):
                 raise
             failed.add((start, end))
             errors.append(str(e))
+    notes = _merge_partial_periods(periods, failed)
     out = []
     for (start, end), days in sorted(periods.items()):
         if (start, end) in failed:
@@ -266,8 +267,44 @@ def parse_emelie(html, stop_sequence, today=None, errors=None):
                 raise
             errors.append(str(e))
             continue
-        out.append({"start": start, "end": end, "days": days})
+        out.append({"start": start, "end": end, "days": days, "notes": notes.get((start, end), [])})
     return out
+
+
+def _merge_partial_periods(periods, failed):
+    """Slår ihop delperioder med samma slutdatum när Ressel bytt ut en del av tabellerna.
+
+    Exempel (ressel.se 2026-11-23): vardagstabellerna anges "16 november 2026 - 29 mars
+    2027", helgtabellerna fortfarande "9 november 2026 - 29 mars 2027". Var för sig är
+    perioderna ofullständiga. Om dagtyp/riktning inte överlappar och tillsammans täcker
+    alla sex tabeller blir de en period med det tidigaste startdatumet; den senare
+    starten redovisas i notes (sync gör en varning av den). Muterar periods/failed.
+    """
+    need = {(d, r) for d in ("weekday", "saturday", "sunday") for r in ("to_city", "from_city")}
+    notes = {}
+    by_end = {}
+    for key in periods:
+        if key not in failed:
+            by_end.setdefault(key[1], []).append(key)
+    for end, keys in by_end.items():
+        if len(keys) < 2:
+            continue
+        have = [{(d, r) for d, dirs in periods[k].items() for r in dirs} for k in keys]
+        union = set().union(*have)
+        if sum(len(h) for h in have) != len(union) or union != need:
+            continue
+        start = min(k[0] for k in keys)
+        merged, msgs = {}, []
+        for k in sorted(keys):
+            for d, dirs in periods.pop(k).items():
+                merged.setdefault(d, {}).update(dirs)
+            if k[0] != start:
+                parts = sorted({d for d in dict.fromkeys(d for d, _ in have[keys.index(k)])})
+                msgs.append(f"{'/'.join(parts)} anges på webben från {k[0]}, övriga dagtyper från {start}; "
+                            f"slås ihop till perioden {start}–{end}")
+        periods[(start, end)] = merged
+        notes[(start, end)] = msgs
+    return notes
 
 
 def pdf_links(html):
